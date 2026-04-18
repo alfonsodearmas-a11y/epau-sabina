@@ -2,9 +2,11 @@
 
 // Admin / Ingestion surface. Ported from docs/design/surfaces.jsx.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { ingestionWithFallback } from '@/lib/api';
 import { INGESTION_RUN } from '@/lib/mock';
+import type { IngestionRun } from '@/lib/types';
 import { RefreshIcon, TerminalIcon, ChevIcon, FileIcon } from '@/components/icons';
 import { Pill } from '@/components/ui/Pill';
 
@@ -26,7 +28,13 @@ const PREVIOUS_RUNS = [
 
 export function AdminPage() {
   const [expanded, setExpanded] = useState(true);
-  const run = INGESTION_RUN;
+  const [run, setRun] = useState<IngestionRun>(INGESTION_RUN);
+
+  useEffect(() => {
+    let cancelled = false;
+    ingestionWithFallback().then((r) => { if (!cancelled) setRun(r); });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="px-8 pt-6 pb-16 max-w-[1400px] mx-auto">

@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 
 import { DotIcon } from '@/components/icons';
 
+import { interpretQuery } from '@/lib/workbench';
+
 import { QueryBar } from './QueryBar';
 import { ManualPicker } from './ManualPicker';
 import { Disambiguation } from './Disambiguation';
@@ -68,19 +70,18 @@ export function Workbench({
     }
   }, [initialState, initialQuery]);
 
-  const run = () => {
+  const run = async () => {
     if (!query.trim()) return;
-    const kind = resolveQuery(query);
-    if (kind === 'ambiguous') {
+    setState('running');
+    setCommentary(null);
+    // Call the real interpreter; fall back to the canned router if it fails.
+    const { kind, disambiguate } = await interpretQuery(query, resolveQuery);
+    if (disambiguate) {
       setState('ambiguous');
       return;
     }
-    setState('running');
-    setCommentary(null);
-    setTimeout(() => {
-      setView({ kind, chart: chartForKind(kind) });
-      setState('results');
-    }, 1400);
+    setView({ kind, chart: chartForKind(kind) });
+    setState('results');
   };
 
   const pickDisambiguation = (id: string) => {

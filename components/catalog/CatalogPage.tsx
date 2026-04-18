@@ -1,11 +1,11 @@
 'use client';
 
 // Catalog surface: filters + indicator list + slide-out detail.
-// Ported from docs/design/surfaces.jsx.
+// Ported from docs/design/surfaces.jsx, wired to /api/indicators.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { INDICATORS } from '@/lib/mock';
+import { indicatorsWithFallback } from '@/lib/api';
 import type { Indicator, IndicatorCategory, Frequency } from '@/lib/types';
 
 import { FilterSidebar } from './FilterSidebar';
@@ -41,13 +41,23 @@ export function CatalogPage() {
   const [sources, setSources] = useState<Set<string>>(new Set());
   const [caveatOnly, setCaveatOnly] = useState(false);
   const [selected, setSelected] = useState<Indicator | null>(null);
+  const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    indicatorsWithFallback().then((rows) => {
+      if (!cancelled) { setIndicators(rows); setLoading(false); }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const sourceList = useMemo(
-    () => Array.from(new Set(INDICATORS.map((i) => sourcePrefix(i.source)))),
-    []
+    () => Array.from(new Set(indicators.map((i) => sourcePrefix(i.source)))),
+    [indicators]
   );
 
-  const filtered = INDICATORS.filter((i) => {
+  const filtered = indicators.filter((i) => {
     if (q && !i.name.toLowerCase().includes(q.toLowerCase())) return false;
     if (cats.size && !cats.has(i.category)) return false;
     if (freqs.size && !freqs.has(i.frequency)) return false;
@@ -70,7 +80,8 @@ export function CatalogPage() {
         <div className="flex items-center gap-3 text-[11px] text-text-tertiary pt-2 num">
           <span>
             Showing <span className="text-text-primary">{filtered.length}</span>{' '}
-            of <span className="text-text-primary">{INDICATORS.length}</span>
+            of <span className="text-text-primary">{indicators.length}</span>
+            {loading ? <span className="ml-2 text-text-quat">loading…</span> : null}
           </span>
         </div>
       </div>

@@ -3,25 +3,35 @@
 // Comparisons surface: left-rail search + table viewer.
 // Ported from docs/design/surfaces.jsx.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { COMPARISON_TABLES } from '@/lib/mock';
+import { comparisonsWithFallback } from '@/lib/api';
+import type { ComparisonTable as ComparisonTableType } from '@/lib/types';
 import { SearchIcon, ColumnsIcon, DownloadIcon, FileIcon } from '@/components/icons';
 
 import { ComparisonTable } from './ComparisonTable';
 
 export function ComparisonsPage() {
-  const firstId = COMPARISON_TABLES[0]?.id ?? '';
-  const [selected, setSelected] = useState<string>(firstId);
+  const [tables, setTables] = useState<ComparisonTableType[]>([]);
+  const [selected, setSelected] = useState<string>('');
   const [q, setQ] = useState('');
 
-  const current =
-    COMPARISON_TABLES.find((t) => t.id === selected) ?? COMPARISON_TABLES[0];
-  const list = COMPARISON_TABLES.filter(
-    (t) => !q || t.name.toLowerCase().includes(q.toLowerCase())
-  );
+  useEffect(() => {
+    let cancelled = false;
+    comparisonsWithFallback().then((rows) => {
+      if (cancelled) return;
+      setTables(rows);
+      if (rows[0]) setSelected((prev) => prev || rows[0]!.id);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
-  if (!current) return null;
+  const current = tables.find((t) => t.id === selected) ?? tables[0];
+  const list = tables.filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase()));
+
+  if (!current) {
+    return <div className="px-8 pt-10 text-text-tertiary">Loading comparison tables…</div>;
+  }
 
   return (
     <div className="px-8 pt-6 pb-16 max-w-[1500px] mx-auto">
