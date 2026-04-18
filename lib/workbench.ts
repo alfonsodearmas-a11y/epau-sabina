@@ -1,52 +1,115 @@
-// Workbench helpers bridging the UI's canned view kinds to the real
-// /api/query/interpret and /api/query/narrate endpoints.
+// Workbench glue: calls /api/query/interpret + /api/query/narrate and
+// pivots the result into a DynamicSpec for DynamicResultsPanel.
 'use client';
 
-import type { ViewKind } from '@/components/workbench/spec';
+import { buildDynamicSpec } from './workbench-spec';
+import { fetchObservations } from './api';
+import type { Indicator } from './types';
+import type { DynamicSpec } from '@/components/workbench/dynamic-spec';
 
-export async function interpretQuery(
+// ---------- Interpret response shape ----------
+interface InterpretOk {
+  indicators: string[];
+  date_range: { start?: string; end?: string } | null;
+  chart_type: 'area' | 'line' | 'bar' | 'bar-paired' | 'dual' | 'table';
+  comparison_mode?: 'actual_vs_budget' | 'administration' | 'multi_series' | null;
+  commentary_requested: boolean;
+  notes?: string;
+}
+interface InterpretDisambiguation {
+  needs_clarification: true;
+  candidates: Array<{ id: string; reason: string }>;
+  message: string;
+}
+type InterpretResult = InterpretOk | InterpretDisambiguation;
+
+interface WorkbenchOk {
+  kind: 'ok';
+  spec: DynamicSpec;
+  indicatorIds: string[];
+}
+interface WorkbenchDisambiguate {
+  kind: 'disambiguate';
+  candidates: Array<{ id: string; reason: string; name?: string }>;
+  message: string;
+}
+interface WorkbenchEmpty {
+  kind: 'empty';
+  message: string;
+}
+
+export type WorkbenchRunResult = WorkbenchOk | WorkbenchDisambiguate | WorkbenchEmpty;
+
+// ---------- Run a query end-to-end ----------
+export async function runWorkbenchQuery(
   query: string,
-  fallback: (q: string) => ViewKind | 'ambiguous',
-): Promise<{ kind: ViewKind; disambiguate: boolean }> {
+  allIndicators: Indicator[],
+  opts?: { forceIndicatorIds?: string[]; forceChartType?: InterpretOk['chart_type'] },
+): Promise<WorkbenchRunResult> {
+  let indicatorIds = opts?.forceIndicatorIds ?? [];
+  let chartTypeHint = opts?.forceChartType ?? 'line';
+  let dateRange: InterpretOk['date_range'] = null;
+
+  if (!indicatorIds.length) {
+    const interp = await callInterpret(query);
+    if (!interp) return { kind: 'empty', message: 'Interpreter call failed.' };
+    if ('needs_clarification' in interp && interp.needs_clarification) {
+      return {
+        kind: 'disambiguate',
+        candidates: interp.candidates.map((c) => ({
+          ...c,
+          name: allIndicators.find((i) => i.id === c.id)?.name,
+        })),
+        message: interp.message,
+      };
+    }
+    const ok = interp as InterpretOk;
+    indicatorIds = ok.indicators.filter(Boolean);
+    chartTypeHint = ok.chart_type ?? 'line';
+    dateRange = ok.date_range ?? null;
+  }
+  if (!indicatorIds.length) return { kind: 'empty', message: 'No indicators matched.' };
+
+  const indicators = allIndicators.filter((i) => indicatorIds.includes(i.id));
+  if (!indicators.length) return { kind: 'empty', message: 'Indicator metadata missing; re-run ingest.' };
+
+  const observations = await fetchObservations(indicatorIds, {
+    start: dateRange?.start,
+    end: dateRange?.end,
+  });
+
+  // Translate interpreter's chart type to what GenericChart supports.
+  const mappedChart: 'area' | 'line' | 'bar' | 'table' =
+    chartTypeHint === 'bar-paired' ? 'bar' :
+    chartTypeHint === 'dual' ? 'line' :
+    chartTypeHint === 'area' || chartTypeHint === 'line' || chartTypeHint === 'bar' || chartTypeHint === 'table'
+      ? chartTypeHint
+      : 'line';
+
+  const spec = buildDynamicSpec({
+    query, indicators, observations, chartType: mappedChart,
+  });
+  return { kind: 'ok', spec, indicatorIds };
+}
+
+// ---------- Interpreter call, with local fallback ----------
+async function callInterpret(query: string): Promise<InterpretResult | null> {
   try {
     const res = await fetch('/api/query/interpret', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ query }),
     });
-    if (!res.ok) throw new Error(`interpret ${res.status}`);
-    const body = await res.json() as
-      | { ok: true; result: { needs_clarification?: true; indicators?: string[] } }
-      | { ok: false };
-    if ('ok' in body && body.ok === true) {
-      const result = body.result as { needs_clarification?: true; indicators?: string[] };
-      if (result.needs_clarification) return { kind: 'psc', disambiguate: true };
-      const indicators = result.indicators ?? [];
-      // Map any known indicator back to one of the prototype's canned kinds so
-      // the existing ResultsPanel can render. A richer UI (arbitrary indicators
-      // + live observations + dynamic chart type) is a v2 task documented in
-      // the README.
-      const kind = mapIndicatorsToKind(indicators);
-      return { kind: kind === 'ambiguous' ? 'psc' : kind, disambiguate: kind === 'ambiguous' };
-    }
+    if (!res.ok) return null;
+    const body = (await res.json()) as { ok: boolean; result?: InterpretResult };
+    if (!body.ok || !body.result) return null;
+    return body.result;
   } catch {
-    // swallow; fall through to fallback
+    return null;
   }
-  const kind = fallback(query);
-  if (kind === 'ambiguous') return { kind: 'psc', disambiguate: true };
-  return { kind, disambiguate: false };
 }
 
-function mapIndicatorsToKind(ids: string[]): ViewKind | 'ambiguous' {
-  for (const id of ids) {
-    if (id.startsWith('psc')) return 'psc';
-    if (id.startsWith('nrf')) return 'nrf';
-    if (id.startsWith('gdp')) return 'gdp';
-    if (id.startsWith('npl')) return 'npl';
-  }
-  return 'ambiguous';
-}
-
+// ---------- Narrator call ----------
 export async function narrate(query: string, indicatorIds: string[]): Promise<string | null> {
   try {
     const res = await fetch('/api/query/narrate', {
@@ -55,10 +118,10 @@ export async function narrate(query: string, indicatorIds: string[]): Promise<st
       body: JSON.stringify({ query, indicatorIds }),
     });
     if (!res.ok) return null;
-    const body = await res.json() as { ok: true; commentary: string } | { ok: false };
-    if ('ok' in body && body.ok === true) return body.commentary;
-    return null;
+    const body = (await res.json()) as { ok: boolean; commentary?: string };
+    return body.ok && body.commentary ? body.commentary : null;
   } catch {
     return null;
   }
 }
+

@@ -2,102 +2,96 @@
 
 // Top-level Workbench shell managing four states: empty / running /
 // ambiguous / results. Ported from docs/design/workbench.jsx — the dev-only
-// "Prototype state demo" footer is intentionally omitted.
+// "Prototype state demo" footer is intentionally omitted. Now backed by live
+// /api/query/interpret + /api/observations via runWorkbenchQuery.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { DotIcon } from '@/components/icons';
-
-import { interpretQuery } from '@/lib/workbench';
+import { indicatorsWithFallback } from '@/lib/api';
+import type { Indicator } from '@/lib/types';
+import { runWorkbenchQuery, type WorkbenchRunResult } from '@/lib/workbench';
 
 import { QueryBar } from './QueryBar';
 import { ManualPicker } from './ManualPicker';
 import { Disambiguation } from './Disambiguation';
 import { RunningState } from './RunningState';
-import { ResultsPanel } from './ResultsPanel';
+import { DynamicResultsPanel } from './DynamicResultsPanel';
 import { EmptyHint } from './EmptyHint';
-import type { ChartType, ViewKind, ViewState } from './spec';
+import type { DynamicSpec } from './dynamic-spec';
 
-export type WorkbenchState = 'empty' | 'running' | 'ambiguous' | 'results';
+export type WorkbenchState = 'empty' | 'running' | 'ambiguous' | 'results' | 'error';
 
 export interface WorkbenchProps {
   initialState?: WorkbenchState;
   initialQuery?: string;
 }
 
-function resolveQuery(q: string): ViewKind | 'ambiguous' {
-  const t = q.toLowerCase();
-  if (t.includes('credit') || t.includes('psc')) return 'psc';
-  if (t.includes('nrf')) return 'nrf';
-  if (t.includes('gdp') || t.includes('growth')) return 'gdp';
-  if (t.includes('npl') || t.includes('non-performing')) return 'npl';
-  if (t.includes('cpi') || t.includes('inflation') || t.includes('exchange'))
-    return 'ambiguous';
-  return 'psc';
-}
-
-function chartForKind(kind: ViewKind): ChartType {
-  if (kind === 'nrf') return 'bar';
-  if (kind === 'gdp') return 'line';
-  return 'area';
-}
-
-export function Workbench({
-  initialState = 'empty',
-  initialQuery = '',
-}: WorkbenchProps) {
+export function Workbench({ initialState = 'empty', initialQuery = '' }: WorkbenchProps) {
+  const router = useRouter();
   const [state, setState] = useState<WorkbenchState>(initialState);
   const [query, setQuery] = useState(initialQuery);
   const [manualMode, setManualMode] = useState(false);
-  const [selected, setSelected] = useState<string[]>([
-    'psc_business',
-    'psc_mortgages',
-    'psc_households',
-  ]);
-  const [view, setView] = useState<ViewState>({ kind: 'psc', chart: 'area' });
+  const [selected, setSelected] = useState<string[]>([]);
+  const [spec, setSpec] = useState<DynamicSpec | null>(null);
   const [commentary, setCommentary] = useState<string | null>(null);
+  const [indicatorIds, setIndicatorIds] = useState<string[]>([]);
+  const [allIndicators, setAllIndicators] = useState<Indicator[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<Array<{ id: string; name?: string; reason: string }>>([]);
+  const runCount = useRef(0);
 
-  // Jump on prop change (used when navigating from saved views / palette)
+  // Load catalog once so manual-picker and ids can resolve by name.
+  useEffect(() => {
+    let cancelled = false;
+    indicatorsWithFallback().then((rows) => { if (!cancelled) setAllIndicators(rows); });
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     setState(initialState);
     setQuery(initialQuery);
-    if (initialState === 'results') {
-      const kind = resolveQuery(initialQuery);
-      if (kind !== 'ambiguous') {
-        setView({ kind, chart: chartForKind(kind) });
-      }
-      setCommentary(null);
+    if (initialState === 'results' && initialQuery && allIndicators.length) {
+      void doRun(initialQuery);
     }
-  }, [initialState, initialQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialState, initialQuery, allIndicators.length]);
 
-  const run = async () => {
-    if (!query.trim()) return;
+  async function doRun(q: string, forceIds?: string[]) {
+    const seq = ++runCount.current;
     setState('running');
+    setSpec(null);
     setCommentary(null);
-    // Call the real interpreter; fall back to the canned router if it fails.
-    const { kind, disambiguate } = await interpretQuery(query, resolveQuery);
-    if (disambiguate) {
+    setErrorMsg(null);
+    setCandidates([]);
+    const result: WorkbenchRunResult = await runWorkbenchQuery(q, allIndicators, forceIds ? { forceIndicatorIds: forceIds } : undefined);
+    if (seq !== runCount.current) return; // stale
+    if (result.kind === 'disambiguate') {
+      setCandidates(result.candidates);
+      setErrorMsg(result.message);
       setState('ambiguous');
       return;
     }
-    setView({ kind, chart: chartForKind(kind) });
+    if (result.kind === 'empty') {
+      setErrorMsg(result.message);
+      setState('error');
+      return;
+    }
+    setSpec(result.spec);
+    setIndicatorIds(result.indicatorIds);
     setState('results');
-  };
+  }
 
-  const pickDisambiguation = (id: string) => {
-    setState('running');
-    setCommentary(null);
-    setTimeout(() => {
-      const kind: ViewKind =
-        id === 'both' ? 'gdp' : id === 'fx' ? 'gdp' : 'npl';
-      setView({ kind, chart: 'line' });
-      setState('results');
-    }, 1000);
-  };
+  const run = () => { if (query.trim()) void doRun(query); };
+  const pickCandidate = (id: string) => { void doRun(query, [id]); };
 
-  const toggleIndicator = (id: string) => {
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  };
+  const summary = useMemo(() => ({
+    indicatorCount: allIndicators.length,
+    observationCount: allIndicators.length ? 'catalog loaded' : 'loading catalog…',
+  }), [allIndicators.length]);
+
+  const manualRun = () => { if (selected.length) void doRun(query || 'manual selection', selected); };
 
   return (
     <div className="px-8 pt-6 pb-16 max-w-[1400px] mx-auto">
@@ -113,8 +107,7 @@ export function Workbench({
         <div className="flex items-center gap-3 text-[11px] text-text-tertiary pt-2">
           <DotIcon className="w-2 h-2 text-[#7FC29B]" />
           <span>
-            Catalog up to date ·{' '}
-            <span className="num">1,384 indicators · 94,726 observations</span>
+            <span className="num">{summary.indicatorCount} indicators</span> · {summary.observationCount}
           </span>
         </div>
       </div>
@@ -128,28 +121,103 @@ export function Workbench({
         disabled={state === 'running'}
       />
       {manualMode ? (
-        <ManualPicker selected={selected} onToggle={toggleIndicator} />
-      ) : null}
-
-      {/* State-specific body */}
-      {state === 'empty' ? (
-        <EmptyHint
-          onPick={(q) => {
-            setQuery(q);
-          }}
+        <ManualPicker
+          selected={selected}
+          onToggle={(id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
+          onRun={manualRun}
         />
       ) : null}
+
+      {state === 'empty' ? (
+        <EmptyHint onPick={(q) => { setQuery(q); void doRun(q); }} />
+      ) : null}
       {state === 'ambiguous' ? (
-        <Disambiguation onPick={pickDisambiguation} />
+        <Disambiguation candidates={candidates} message={errorMsg ?? ''} onPick={pickCandidate} />
       ) : null}
       {state === 'running' ? <RunningState /> : null}
-      {state === 'results' ? (
-        <ResultsPanel
-          view={view}
+      {state === 'error' ? (
+        <div className="glass rounded-lg p-5 mt-3 border-l-2 border-l-[#E06C6C]/40 flex items-center justify-between">
+          <div className="text-[13px] text-text-secondary">{errorMsg ?? 'Query failed.'}</div>
+          <button onClick={run} className="h-8 px-3 rounded bg-white/[0.04] border border-white/10 text-text-secondary hover:text-text-primary text-[12px]">Retry</button>
+        </div>
+      ) : null}
+      {state === 'results' && spec ? (
+        <DynamicResultsPanel
+          spec={spec}
+          query={query}
           commentary={commentary}
           setCommentary={setCommentary}
+          onExportPng={() => exportPng(spec)}
+          onExportDocx={() => exportDocx(spec, commentary)}
+          onSaveView={() => saveView(spec, query, indicatorIds, router)}
         />
       ) : null}
     </div>
   );
+}
+
+async function exportPng(spec: DynamicSpec) {
+  // Grab the chart SVG from the DOM and POST it to the server as a PNG request.
+  const svg = document.querySelector('.recharts-surface');
+  if (!svg) return;
+  const xml = new XMLSerializer().serializeToString(svg);
+  // Wrap in a document with explicit width/height for the server renderer.
+  const wrapped = `<?xml version="1.0" standalone="no"?>\n${xml}`;
+  const res = await fetch('/api/export/png', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ svg: wrapped, filename: `${slug(spec.title)}.png` }),
+  });
+  if (!res.ok) return;
+  const blob = await res.blob();
+  triggerDownload(blob, `${slug(spec.title)}.png`);
+}
+
+async function exportDocx(spec: DynamicSpec, commentary: string | null) {
+  const res = await fetch('/api/export/docx', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      title: spec.title,
+      subtitle: spec.subtitle,
+      caveat: spec.caveats.map((c) => c.text).join(' • ') || null,
+      commentary,
+      series: spec.indicators.map((ind) => ({
+        name: ind.name,
+        unit: ind.unit,
+        source: ind.source,
+        rows: spec.data.map((row) => ({
+          period: String(row[spec.xKey] ?? ''),
+          value: typeof row[ind.id] === 'number' ? (row[ind.id] as number) : null,
+        })),
+      })),
+    }),
+  });
+  if (!res.ok) return;
+  const blob = await res.blob();
+  triggerDownload(blob, `${slug(spec.title)}.docx`);
+}
+
+async function saveView(spec: DynamicSpec, query: string, indicatorIds: string[], router: ReturnType<typeof useRouter>) {
+  const name = window.prompt('Name this view:', spec.title);
+  if (!name) return;
+  await fetch('/api/saved', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name, queryText: query, indicatorIds, config: { chartType: spec.chartType } }),
+  });
+  router.refresh();
+}
+
+function slug(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50);
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
