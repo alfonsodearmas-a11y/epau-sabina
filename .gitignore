@@ -17,3 +17,5 @@ Claude Design /
 
 # Workbook source file — internal MoF data, kept local only
 Guyana Key Statistics_*.xlsx
+
+scripts/ingest/output/
