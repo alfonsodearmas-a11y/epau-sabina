@@ -1,0 +1,19 @@
+node_modules/
+.next/
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+dist/
+build/
+.vercel/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Original design prototype source (vendored into docs/design/)
+Claude Design /
+
+# Workbook source file — internal MoF data, kept local only
+Guyana Key Statistics_*.xlsx
