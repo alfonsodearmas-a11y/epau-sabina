@@ -68,9 +68,7 @@ export function FreqPill({ frequency }: { frequency: Frequency }) {
       ? 'M'
       : frequency === 'Quarterly'
       ? 'Q'
-      : frequency === 'Annual'
-      ? 'A'
-      : frequency.charAt(0);
+      : 'A';
   return (
     <span className="num inline-flex items-center justify-center px-1.5 h-5 rounded-sm text-[10px] font-medium tracking-[0.08em] uppercase bg-white/[0.03] text-text-tertiary border border-white/5">
       {letter}
