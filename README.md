@@ -210,18 +210,25 @@ After Sabina's used v1 for a week, revisit these:
 
 ---
 
-## Deferred to phase 2
+## Deployment
 
-- Production deploy (Vercel) with the DG Work OS pattern
-- PNG export via a headless chart renderer (currently re-streams the client SVG)
-- Multi-user session management beyond the header-based allowlist
-- Scheduled ingestion
-- Mobile responsive layout
-- Write-back / data editing
-- PDF export (DOCX is enough)
-- Multi-language
-- Public sharing
-- Settings / onboarding / notifications
+Local v1 is the primary target. When you're ready to put it on Vercel,
+follow `docs/deployment.md` (env vars, identity middleware, migration
+process, initial data load, rollback plan).
+
+## Still deferred
+
+- Multi-user session management beyond the header-based allowlist (wire
+  an SSO proxy like Vercel Access or a `/api/whoami` cookie-setter
+  against Supabase Auth; both are documented in `docs/deployment.md`).
+- Scheduled ingestion (today the workbook is re-ingested manually by
+  running `npm run ingest -- --live` on the laptop with the fresh xlsx).
+- Mobile responsive layout (desktop analyst tool by design).
+- Write-back / data editing.
+- PDF export (DOCX is enough).
+- Multi-language.
+- Public sharing.
+- Settings / onboarding / notifications.
 
 None of these are implemented on purpose.
 

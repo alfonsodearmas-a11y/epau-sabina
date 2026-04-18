@@ -36,6 +36,7 @@ import { runMortgagesCB } from './adapters/mortgages_cb';
 import { runCapexSector } from './adapters/capex_sector';
 import { runPricesSummary } from './adapters/prices_summary';
 import { runRevenueExpenditure } from './adapters/revenue_expenditure';
+import { runApnuFuel } from './adapters/apnu_fuel';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -96,6 +97,7 @@ async function main() {
     ['Capital Expenditure_Sector', () => runCapexSector(lb.book, ctx)],
     ['Prices_Summary', () => runPricesSummary(lb.book, ctx)],
     ['Revenue & Expenditure', () => runRevenueExpenditure(lb.book, ctx)],
+    ['APNU_Fuel Prices (obs)', () => runApnuFuel(lb.book, ctx)],
   ];
   for (const [name, fn] of bespokeE) {
     const before = ctx.observations.length;

@@ -4,6 +4,7 @@
 
 export type IndicatorCategory =
   | 'Macro'
+  | 'Prices'
   | 'Fiscal'
   | 'Monetary'
   | 'External'

@@ -9,8 +9,10 @@ export const ARCHETYPE_C: ArchetypeCConfig[] = [
     headerRow: 3, dateCol: 1, dataStartRow: 4, labelCols: [2, 3, 4, 5],
   },
   {
+    // Employment mixes "August 2020" with "End-YYYY" annual snapshots; treat the
+    // whole sheet as annual (MoF's own convention) so every row ingests.
     sheet: 'Employment', archetype: 'C',
-    category: 'social', source: 'Sectoral reports', unit: 'count', frequency: 'monthly',
+    category: 'social', source: 'Sectoral reports', unit: 'count', frequency: 'annual',
     idPrefix: 'employment', subcategory: 'Employment by sector',
     headerRow: 4, dateCol: 1, dataStartRow: 5, labelCols: [2, 3, 4, 5, 6, 7, 8, 9, 10],
   },

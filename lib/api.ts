@@ -8,7 +8,7 @@ import type { Indicator, IndicatorCategory, Frequency, ComparisonTable, SavedVie
 
 const CATEGORY_DB_TO_UI: Record<string, IndicatorCategory> = {
   real_economy: 'Macro',
-  prices: 'Macro',
+  prices: 'Prices',
   external: 'External',
   monetary: 'Monetary',
   fiscal: 'Fiscal',

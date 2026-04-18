@@ -122,6 +122,14 @@ export function coerceHeaderToPeriod(v: unknown, freq: 'annual' | 'quarterly' | 
       return { periodDate: `${y}-${String(idx + 1).padStart(2, '0')}-01`, periodLabel: `${short} ${y}`, frequency: 'monthly' };
     }
   }
+  // "End-YYYY" — MoF's own end-of-year labels (observed on Employment sheet).
+  const endYear = /^end[\s\-/](\d{4})$/i.exec(s);
+  if (endYear) {
+    const y = Number(endYear[1]);
+    if (y >= 1900 && y <= 2099) {
+      return { periodDate: `${y}-01-01`, periodLabel: `End-${y}`, frequency: 'annual' };
+    }
+  }
   // "End-Jun 2014" or "End-Jun" with neighbouring year cell — callers resolve composite headers.
   return null;
 }

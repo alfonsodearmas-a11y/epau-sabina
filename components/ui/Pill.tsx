@@ -10,6 +10,7 @@ export type PillTone =
   | 'warn'
   | 'danger'
   | 'macro'
+  | 'prices'
   | 'monetary'
   | 'fiscal'
   | 'external'
@@ -23,6 +24,7 @@ const tones: Record<PillTone, string> = {
   warn: 'bg-[#E0A050]/10 text-[#E0A050] border-[#E0A050]/25',
   danger: 'bg-[#E06C6C]/10 text-[#E06C6C] border-[#E06C6C]/25',
   macro: 'bg-[#7AA7D9]/10 text-[#A9C5E3] border-[#7AA7D9]/25',
+  prices: 'bg-[#EFC9B6]/10 text-[#EFC9B6] border-[#EFC9B6]/25',
   monetary: 'bg-gold-300/10 text-gold-200 border-gold-300/30',
   fiscal: 'bg-[#C8A87F]/10 text-[#C8A87F] border-[#C8A87F]/25',
   external: 'bg-[#7FC29B]/10 text-[#7FC29B] border-[#7FC29B]/25',
@@ -50,6 +52,7 @@ export function Pill({ tone = 'neutral', children, className = '' }: PillProps) 
 
 const categoryToTone: Record<IndicatorCategory, PillTone> = {
   Macro: 'macro',
+  Prices: 'prices',
   Monetary: 'monetary',
   Fiscal: 'fiscal',
   External: 'external',

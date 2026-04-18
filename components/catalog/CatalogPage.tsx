@@ -14,6 +14,7 @@ import { IndicatorDetail } from './IndicatorDetail';
 
 const CATEGORY_LIST: IndicatorCategory[] = [
   'Macro',
+  'Prices',
   'Fiscal',
   'Monetary',
   'External',

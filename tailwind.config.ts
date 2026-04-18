@@ -17,6 +17,7 @@ const config: Config = {
         text: { primary: '#F2ECD9', secondary: '#C7C2B3', tertiary: '#8A8778', quat: '#5C5A52' },
         accent: {
           macro:    '#7AA7D9',
+          prices:   '#EFC9B6',
           fiscal:   '#C8A87F',
           external: '#7FC29B',
           debt:     '#C89878',

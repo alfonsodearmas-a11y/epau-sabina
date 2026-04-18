@@ -1,10 +1,9 @@
-// Prices_Summary: stacked commodity blocks, each with its own local header.
-// Layout pattern (observed for "Chicken, Frozen/Fresh"):
-//   row N   : commodity name at col 1, unit at col 2
-//   row N+1 : year header at col 3+ ("2021", "2022", "2023")
-//   row N+2..: month/subtype labels at col 1, prices in year cols
-// Because markets/categories vary per block, we do a streaming scan: any row where
-// col 1 text is followed by a row with year cells defines a new block.
+// Prices_Summary: stacked commodity blocks. Each block is:
+//   row N   : col 1 = commodity name, col 2 = unit (e.g. "Per KG")
+//   row N+1 : year headers at col 3+ (e.g. 2021, 2022, 2023)
+//   rows N+2..N+13 : col 2 = month abbreviation ("Jan" .. "Dec"), col 3+ = monthly price
+// Some blocks carry summary rows off to the right ("Average Price", "YoY Growth"); we
+// ignore them and only ingest the monthly time series.
 import type { WorkBook } from 'xlsx';
 import type { IngestContext } from '../lib/types';
 import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
@@ -12,6 +11,11 @@ import { coerceHeaderToPeriod, slugify } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
 
 const SHEET = 'Prices_Summary';
+
+const MONTH_MAP: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
 
 export function runPricesSummary(book: WorkBook, ctx: IngestContext): void {
   const sheet = book.Sheets[SHEET];
@@ -24,58 +28,58 @@ export function runPricesSummary(book: WorkBook, ctx: IngestContext): void {
   while (r <= b.R) {
     if (isBlankRow(sheet, r, b.c, b.C)) { r++; continue; }
     if (isNavCell(cellAt(sheet, r, 0))) { r++; continue; }
-    const headerA = cellAt(sheet, r, 1);
-    const unitA = cellAt(sheet, r, 2);
-    // If next non-blank row has year cells starting at col 3, treat (r) as commodity header
-    let lookAhead = r + 1;
-    while (lookAhead <= Math.min(r + 3, b.R) && isBlankRow(sheet, lookAhead, b.c, b.C)) lookAhead++;
-    const yearCols: { col: number; periodDate: string; periodLabel: string }[] = [];
-    for (let c = 2; c <= b.C; c++) {
-      const p = coerceHeaderToPeriod(cellAt(sheet, lookAhead, c), 'annual');
-      if (p) yearCols.push({ col: c, periodDate: p.periodDate, periodLabel: p.periodLabel });
+    const c1 = cellAt(sheet, r, 1);
+    const c2 = cellAt(sheet, r, 2);
+    const commodity = typeof c1 === 'string' ? c1.trim() : '';
+    const unit = typeof c2 === 'string' ? c2.trim() : '';
+    // A commodity block header looks like: col 1 = long name, col 2 = unit
+    // (not a month), and the next non-blank row has year cells at col 3+.
+    const looksLikeCommodity = commodity.length > 2 && unit.length > 0 && !(unit.toLowerCase() in MONTH_MAP);
+    if (!looksLikeCommodity) { r++; continue; }
+
+    // Find the year row
+    let yearRow = r + 1;
+    while (yearRow <= Math.min(r + 5, b.R) && isBlankRow(sheet, yearRow, b.c, b.C)) yearRow++;
+    const yearCols: { col: number; year: number }[] = [];
+    for (let c = 3; c <= Math.min(b.c + 15, b.C); c++) {
+      const p = coerceHeaderToPeriod(cellAt(sheet, yearRow, c), 'annual');
+      if (p) yearCols.push({ col: c, year: Number(p.periodDate.slice(0, 4)) });
     }
-    if (yearCols.length >= 2 && typeof headerA === 'string' && headerA.trim()) {
-      const commodity = headerA.trim();
-      const unit = typeof unitA === 'string' && unitA.trim() ? unitA.trim() : 'G$';
-      // Data rows follow lookAhead until a new header or end
-      let dr = lookAhead + 1;
-      while (dr <= b.R) {
-        if (isBlankRow(sheet, dr, b.c, b.C)) { dr++; continue; }
-        const subLabelRaw = cellAt(sheet, dr, 1);
-        if (typeof subLabelRaw !== 'string' || !subLabelRaw.trim()) { dr++; continue; }
-        const subLabel = subLabelRaw.trim();
-        // Detect whether this row is actually the next block header — heuristic:
-        // if any col 3+ at dr+1 has a year, dr is probably a new header. Break.
-        let nextHasYears = false;
-        for (let c = 2; c <= b.C; c++) {
-          if (coerceHeaderToPeriod(cellAt(sheet, dr + 1, c), 'annual')) { nextHasYears = true; break; }
-        }
-        if (nextHasYears) break;
-        const indicatorId = `price_${slugify(commodity)}_${slugify(subLabel)}`;
-        let wrote = false;
-        for (const yc of yearCols) {
-          const raw = cellAt(sheet, dr, yc.col);
-          if (raw === null || raw === undefined || raw === '') continue;
-          const value = coerceNumber(raw, { sheet: SHEET, r: dr, c: yc.col }, ctx);
-          if (value === null) continue;
-          ctx.observations.push({
-            indicatorId, periodDate: yc.periodDate, periodLabel: yc.periodLabel,
-            value, scenario: 'actual',
-          });
-          wrote = true;
-        }
-        if (wrote) {
-          ctx.indicators.set(indicatorId, {
-            id: indicatorId, name: `${commodity} — ${subLabel}`, category: 'prices',
-            subcategory: 'Market prices summary', unit, frequency: 'annual',
-            source: 'Bureau of Statistics', sourceTab: SHEET, caveat,
-          });
-        }
-        dr++;
+    if (yearCols.length < 1) { r++; continue; }
+
+    const indicatorId = `price_${slugify(commodity)}`;
+    let wrote = false;
+    // Scan up to ~16 rows below for month data (12 + blanks)
+    const endScan = Math.min(yearRow + 18, b.R);
+    for (let dr = yearRow + 1; dr <= endScan; dr++) {
+      if (isBlankRow(sheet, dr, b.c, b.C)) continue;
+      const monthRaw = cellAt(sheet, dr, 2);
+      if (typeof monthRaw !== 'string') continue;
+      const monthKey = monthRaw.trim().slice(0, 3).toLowerCase();
+      const monthNum = MONTH_MAP[monthKey];
+      if (!monthNum) continue;
+      for (const yc of yearCols) {
+        const raw = cellAt(sheet, dr, yc.col);
+        if (raw === null || raw === undefined || raw === '') continue;
+        const value = coerceNumber(raw, { sheet: SHEET, r: dr, c: yc.col }, ctx);
+        if (value === null) continue;
+        const iso = `${yc.year}-${String(monthNum).padStart(2, '0')}-01`;
+        const label = `${monthRaw.trim().slice(0, 3)} ${yc.year}`;
+        ctx.observations.push({
+          indicatorId, periodDate: iso, periodLabel: label, value, scenario: 'actual',
+        });
+        wrote = true;
       }
-      r = dr;
-      continue;
     }
-    r++;
+    if (wrote) {
+      ctx.indicators.set(indicatorId, {
+        id: indicatorId, name: commodity, category: 'prices',
+        subcategory: 'Market prices summary', unit, frequency: 'monthly',
+        source: 'Bureau of Statistics', sourceTab: SHEET, caveat,
+      });
+    }
+    // Advance past this block — jump to just after the last scanned row so
+    // we don't re-read its values as a fresh commodity header.
+    r = endScan + 1;
   }
 }

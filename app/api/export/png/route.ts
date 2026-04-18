@@ -1,22 +1,48 @@
-// Server-side PNG export — thin stub that echoes the caller's SVG string
-// as a data URL. In a v1 where Sabina works locally, pressing "Chart as PNG"
-// can capture the client-side SVG and post it here to re-stream it as a
-// downloadable PNG using the browser Canvas API. For now we just return
-// the SVG as-is; the client can blob-download from the response.
+// Server-side SVG → PNG export. The client posts the <svg> string (typically
+// grabbed from Recharts' root `.recharts-surface` element plus a dark-theme
+// wrapper) and we rasterize to PNG using @resvg/resvg-js.
 import { NextResponse } from 'next/server';
+import { Resvg } from '@resvg/resvg-js';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+interface Body {
+  svg?: string;
+  filename?: string;
+  width?: number;
+  background?: string;
+}
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const svg: string | undefined = body?.svg;
-  const filename: string = (body?.filename as string) || 'chart.svg';
-  if (!svg || typeof svg !== 'string') return NextResponse.json({ error: 'svg required' }, { status: 400 });
-  return new NextResponse(svg, {
-    status: 200,
-    headers: {
-      'Content-Type': 'image/svg+xml',
-      'Content-Disposition': `attachment; filename="${filename.replace(/[^a-z0-9_.-]/gi, '_')}"`,
-    },
-  });
+  const body = (await req.json().catch(() => null)) as Body | null;
+  if (!body?.svg) return NextResponse.json({ error: 'svg required' }, { status: 400 });
+
+  // Wrap in an outer SVG so background + explicit size render correctly.
+  const width = body.width ?? 1200;
+  const background = body.background ?? '#0A0E1A';
+  const inner = body.svg;
+  const wrapped = /^<\?xml/.test(inner)
+    ? inner
+    : `<?xml version="1.0" encoding="UTF-8"?>\n${inner}`;
+  const withBg = wrapped.replace(/<svg\b/, `<svg style="background:${background}"`);
+
+  try {
+    const r = new Resvg(withBg, {
+      background,
+      fitTo: { mode: 'width', value: width },
+      font: { loadSystemFonts: true },
+    });
+    const png = r.render().asPng();
+    const filename = (body.filename ?? 'chart.png').replace(/[^a-z0-9_.-]/gi, '_');
+    return new NextResponse(new Uint8Array(png), {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (e) {
+    return NextResponse.json({ error: 'render_failed', detail: (e as Error).message }, { status: 500 });
+  }
 }
