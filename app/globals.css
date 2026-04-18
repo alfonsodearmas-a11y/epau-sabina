@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Canonical styling from docs/design/reference/EPAU_Workbench_v1.html */
+
+:root {
+  color-scheme: dark;
+}
+
+html, body, #__next {
+  background: #0A0E1A;
+  color: #F2ECD9;
+  min-height: 100vh;
+  letter-spacing: 0.005em;
+}
+
+body {
+  background:
+    radial-gradient(1200px 700px at 85% -10%, rgba(212, 175, 55, 0.07), transparent 60%),
+    radial-gradient(900px 600px at 10% 110%, rgba(122, 167, 217, 0.04), transparent 60%),
+    linear-gradient(180deg, #0A0E1A 0%, #0E1424 40%, #151B2E 100%);
+  background-attachment: fixed;
+  font-family: var(--font-outfit), 'Outfit', system-ui, sans-serif;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+}
+
+.glass-strong {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+
+.gold-ring {
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.08), 0 8px 40px -12px rgba(212, 175, 55, 0.25);
+}
+
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 4px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes shimmerPulse { 0%,100% { opacity: 0.35; } 50% { opacity: 0.75; } }
+.skeleton-bar { animation: shimmerPulse 1.6s ease-in-out infinite; }
+@keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.slide-in { animation: slideIn 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.fade-up { animation: fadeUp 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+::selection { background: rgba(212, 175, 55, 0.35); color: #fff; }
+
+input, textarea, button { font-family: inherit; }
+input:focus, textarea:focus, button:focus { outline: none; }
+.focus-gold:focus { box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.35); }
+
+h1, h2, h3 { font-family: var(--font-dm-serif), 'DM Serif Display', Georgia, serif; }

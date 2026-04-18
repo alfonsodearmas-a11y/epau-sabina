@@ -1,0 +1,182 @@
+// EPAU Analyst Workbench data model. See docs/archetypes.md for shape rationale.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum IndicatorCategory {
+  real_economy
+  external
+  prices
+  monetary
+  fiscal
+  debt
+  social
+}
+
+enum Frequency {
+  annual
+  quarterly
+  monthly
+}
+
+enum Scenario {
+  actual
+  budget
+  revised
+  projection
+}
+
+enum IssueSeverity {
+  info
+  warning
+  error
+}
+
+enum IngestionStatus {
+  running
+  succeeded
+  failed
+}
+
+model Indicator {
+  id                       String             @id
+  name                     String
+  category                 IndicatorCategory
+  subcategory              String?
+  unit                     String
+  frequency                Frequency
+  source                   String
+  sourceTab                String             @map("source_tab")
+  caveat                   String?
+  latestObservationDate    DateTime?          @map("latest_observation_date") @db.Date
+  earliestObservationDate  DateTime?          @map("earliest_observation_date") @db.Date
+  lastIngestedAt           DateTime?          @map("last_ingested_at")
+  observations             Observation[]
+
+  @@index([category])
+  @@index([frequency])
+  @@index([source])
+  @@index([sourceTab])
+  @@map("indicators")
+}
+
+model Observation {
+  id          BigInt    @id @default(autoincrement())
+  indicatorId String    @map("indicator_id")
+  periodDate  DateTime  @map("period_date") @db.Date
+  periodLabel String    @map("period_label")
+  value       Decimal?  @db.Decimal(24, 6)
+  isEstimate  Boolean   @default(false) @map("is_estimate")
+  scenario    Scenario  @default(actual)
+  indicator   Indicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@unique([indicatorId, periodDate, scenario], name: "observations_upsert_key")
+  @@index([periodDate])
+  @@index([indicatorId, periodDate])
+  @@map("observations")
+}
+
+model ComparisonTable {
+  id          String                @id
+  name        String
+  category    IndicatorCategory?
+  source      String?
+  sourceTab   String                @map("source_tab")
+  description String?
+  metadata    Json?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  rows        ComparisonTableRow[]
+
+  @@index([sourceTab])
+  @@map("comparison_tables")
+}
+
+model ComparisonTableRow {
+  id           BigInt           @id @default(autoincrement())
+  tableId      String           @map("table_id")
+  rowLabel     String           @map("row_label")
+  groupLabel   String?          @map("group_label")
+  columnLabel  String           @map("column_label")
+  value        Decimal?         @db.Decimal(24, 6)
+  valueText    String?          @map("value_text")
+  unit         String?
+  note         String?
+  orderIndex   Int              @default(0) @map("order_index")
+  table        ComparisonTable  @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@index([tableId, orderIndex])
+  @@map("comparison_table_rows")
+}
+
+model IngestionRun {
+  id                  String             @id @default(uuid())
+  startedAt           DateTime           @default(now()) @map("started_at")
+  finishedAt          DateTime?          @map("finished_at")
+  workbookFilename    String             @map("workbook_filename")
+  workbookSizeBytes   BigInt?            @map("workbook_size_bytes")
+  indicatorsUpserted  Int                @default(0) @map("indicators_upserted")
+  observationsUpserted Int               @default(0) @map("observations_upserted")
+  comparisonTablesUpserted Int           @default(0) @map("comparison_tables_upserted")
+  issuesCount         Int                @default(0) @map("issues_count")
+  status              IngestionStatus    @default(running)
+  notes               String?
+  issues              IngestionIssue[]
+  snapshots           RawSheetSnapshot[]
+
+  @@map("ingestion_runs")
+}
+
+model IngestionIssue {
+  id         BigInt          @id @default(autoincrement())
+  runId      String          @map("run_id")
+  sheet      String
+  row        Int?
+  col        Int?
+  cellRef    String?         @map("cell_ref")
+  rawValue   String?         @map("raw_value")
+  reason     String
+  severity   IssueSeverity   @default(warning)
+  resolved   Boolean         @default(false)
+  createdAt  DateTime        @default(now()) @map("created_at")
+  run        IngestionRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([severity])
+  @@map("ingestion_issues")
+}
+
+model RawSheetSnapshot {
+  id           BigInt        @id @default(autoincrement())
+  runId        String        @map("run_id")
+  sheetName    String        @map("sheet_name")
+  rowCount     Int           @map("row_count")
+  colCount     Int           @map("col_count")
+  cells        Json
+  ingestedAt   DateTime      @default(now()) @map("ingested_at")
+  run          IngestionRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, sheetName], name: "raw_sheet_snapshots_run_sheet_key")
+  @@map("raw_sheet_snapshots")
+}
+
+model SavedQuery {
+  id           String    @id @default(uuid())
+  userEmail    String    @map("user_email")
+  name         String
+  queryText    String    @map("query_text")
+  indicatorIds String[]  @map("indicator_ids")
+  config       Json?
+  lastRunAt    DateTime? @map("last_run_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([userEmail])
+  @@map("saved_queries")
+}
