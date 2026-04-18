@@ -5,7 +5,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|denied|api/_health).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|denied|api/health).*)'],
 };
 
 export function middleware(req: NextRequest) {
