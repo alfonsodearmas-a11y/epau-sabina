@@ -22,11 +22,6 @@ export const ARCHETYPE_E: MultiBlockConfig[] = [
     subcategory: 'Private sector credit — historical breakdown', labelCol: 1, minHeaderYears: 3,
   },
   {
-    sheet: 'Revenue & Expenditure', category: 'fiscal', source: 'MoF FMD',
-    unit: 'G$ millions', frequency: 'annual', idPrefix: 'rev_exp',
-    subcategory: 'Revenue and expenditure summary', labelCol: 1, minHeaderYears: 3,
-  },
-  {
     sheet: 'GOG Measures', category: 'fiscal', source: 'MoF FMD',
     unit: 'G$ thousands', frequency: 'annual', idPrefix: 'gog_measures',
     subcategory: 'Government fiscal measures', labelCol: 1, minHeaderYears: 2,
