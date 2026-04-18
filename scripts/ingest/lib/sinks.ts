@@ -182,12 +182,10 @@ export async function makeDbSink(): Promise<IngestSink> {
           }
           comparisonTablesUpserted++;
         }
-        // Raw snapshots
+        // Raw snapshots — always insert fresh rows per run (run id is unique).
         for (const s of ctx.snapshots) {
-          await prisma.rawSheetSnapshot.upsert({
-            where: { runId_sheetName: { runId: run.id, sheetName: s.sheetName } },
-            update: { rowCount: s.rowCount, colCount: s.colCount, cells: s.cells as never },
-            create: { runId: run.id, sheetName: s.sheetName, rowCount: s.rowCount, colCount: s.colCount, cells: s.cells as never },
+          await prisma.rawSheetSnapshot.create({
+            data: { runId: run.id, sheetName: s.sheetName, rowCount: s.rowCount, colCount: s.colCount, cells: s.cells as never },
           });
         }
         // Issues

@@ -2,7 +2,7 @@
 // separated by blank rows, then for each block tries to detect a year/date header
 // and ingest the rows below it as A-shaped indicators. Each block can override
 // category/unit via a sheet-level fallback config.
-import type { WorkBook } from 'xlsx';
+import type { WorkBook, WorkSheet } from 'xlsx';
 import type { Category, Frequency, IngestContext } from './types';
 import { cellAt, isBlankRow, isNavCell, sheetBounds } from './cells';
 import { coerceHeaderToPeriod, slugify } from './dates';
@@ -23,7 +23,7 @@ export interface MultiBlockConfig {
 
 interface Block { startRow: number; endRow: number }
 
-function segmentBlocks(sheet: ReturnType<WorkBook['Sheets'][string]>, startRow: number, endRow: number, c0: number, c1: number): Block[] {
+function segmentBlocks(sheet: WorkSheet, startRow: number, endRow: number, c0: number, c1: number): Block[] {
   const blocks: Block[] = [];
   let inBlock = false;
   let blockStart = -1;

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Outfit, DM_Serif_Display, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { AppFrame } from '@/components/app/AppFrame';
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit', display: 'swap' });
 const dmSerif = DM_Serif_Display({ subsets: ['latin'], weight: '400', variable: '--font-dm-serif', display: 'swap' });
@@ -14,7 +15,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${dmSerif.variable} ${jetbrains.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AppFrame>{children}</AppFrame>
+      </body>
     </html>
   );
 }

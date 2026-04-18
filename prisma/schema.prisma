@@ -163,7 +163,7 @@ model RawSheetSnapshot {
   ingestedAt   DateTime      @default(now()) @map("ingested_at")
   run          IngestionRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
 
-  @@unique([runId, sheetName], name: "raw_sheet_snapshots_run_sheet_key")
+  @@unique([runId, sheetName])
   @@map("raw_sheet_snapshots")
 }
 

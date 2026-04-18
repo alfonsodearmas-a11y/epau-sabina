@@ -2,7 +2,7 @@
 // Detects header row as the first non-blank row (past any title/unit rows) that has
 // at least two non-empty cells beyond `labelCol`. The label column may be col 0 or 1;
 // we auto-pick whichever col has more non-empty cells across the scan region.
-import type { WorkBook } from 'xlsx';
+import type { WorkBook, WorkSheet } from 'xlsx';
 import type { Category, IngestContext, ComparisonTableRecord, ComparisonTableRowRecord } from './types';
 import { cellAt, isBlankRow, isNavCell, sheetBounds } from './cells';
 import { coerceHeaderToPeriod } from './dates';
@@ -20,7 +20,7 @@ export interface ComparisonConfig {
   unit?: string;
 }
 
-function autoLabelCol(sheet: ReturnType<WorkBook['Sheets'][string]>, startRow: number, endRow: number, c0: number): number {
+function autoLabelCol(sheet: WorkSheet, startRow: number, endRow: number, c0: number): number {
   // Prefer col 1 when col 0 is mostly empty (common in this workbook)
   let c0count = 0, c1count = 0;
   const maxRow = Math.min(startRow + 30, endRow);
