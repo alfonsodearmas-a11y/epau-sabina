@@ -26,8 +26,8 @@ Production-only.
 
 | Variable | Scope | Notes |
 |---|---|---|
-| `DATABASE_URL` | Production + Preview | pooled connection, port 6543 |
-| `DIRECT_URL` | Production + Preview | direct 5432 for migrations |
+| `DATABASE_URL` | Production + Preview | pooled connection, port 6543, **append `?sslmode=require`** |
+| `DIRECT_URL` | Production + Preview | session pooler 5432 for migrations, **append `?sslmode=require`** |
 | `NEXT_PUBLIC_SUPABASE_URL` | All | public, can appear in client bundles |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | All | public |
 | `SUPABASE_SERVICE_ROLE_KEY` | Production | server-only, never expose |

@@ -60,8 +60,8 @@ Edit the file in TextEdit. The fields you need:
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL | Supabase dashboard → Settings → API → "Project URL" |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public client key | Supabase → Settings → API → "anon public" |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin server-only key | Supabase → Settings → API → "service_role". **Never commit this, never paste it into a frontend.** |
-| `DATABASE_URL` | Postgres pooled connection | Supabase → Settings → Database → Connection String → "Transaction pooler" (port 6543) |
-| `DIRECT_URL` | Direct connection (migrations) | Same page, "Session pooler" or the raw 5432 URL |
+| `DATABASE_URL` | Postgres pooled connection | Supabase → Settings → Database → Connection String → **Transaction pooler** (`aws-…pooler.supabase.com:6543`). URL-encode any special char in your password (`@` → `%40`). Append `?sslmode=require`. The **Direct connection** (`db.<ref>.supabase.co`) is IPv6-only on the free tier and won't work from most dev machines — use the pooler. |
+| `DIRECT_URL` | Session pooler for migrations | Same page, **Session pooler** (`aws-…pooler.supabase.com:5432`) with `?sslmode=require`. |
 | `ANTHROPIC_API_KEY` | Claude API key | console.anthropic.com → API keys. Used by `/api/query/interpret` and `/api/query/narrate`. |
 | `ANTHROPIC_MODEL` | Model name | Default is `claude-sonnet-4-5`. Leave as is unless we change it. |
 | `EPAU_EMAIL_ALLOWLIST` | Comma-separated emails permitted to use the workbench | The EPAU team's addresses. Alfonso's is preconfigured. |
