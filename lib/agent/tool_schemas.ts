@@ -1,8 +1,4 @@
-// Anthropic tool-use schemas for the EPAU agent.
-// Wire to Claude via messages.create({ tools: AGENT_TOOLS }).
-// JSON schema keeps strict validation lightweight; server-side code re-validates.
-
-import { INDICATOR_CATEGORIES } from './types';
+import { CATALOG_KINDS, INDICATOR_CATEGORIES, SCENARIOS, SEARCH_TOOLS } from './types';
 
 const POINT_SCHEMA = {
   type: 'object',
@@ -46,7 +42,7 @@ export const AGENT_TOOLS = [
         category: { type: 'string', enum: INDICATOR_CATEGORIES },
         kinds: {
           type: 'array',
-          items: { type: 'string', enum: ['indicator', 'comparison_table'] },
+          items: { type: 'string', enum: CATALOG_KINDS },
         },
         limit: { type: 'integer', minimum: 1, maximum: 25 },
       },
@@ -71,7 +67,7 @@ export const AGENT_TOOLS = [
         },
         start_date: { type: 'string' },
         end_date: { type: 'string' },
-        scenario: { type: 'string', enum: ['actual', 'budget', 'revised', 'projection'] },
+        scenario: { type: 'string', enum: SCENARIOS },
       },
     },
   },
@@ -89,28 +85,14 @@ export const AGENT_TOOLS = [
           type: 'string',
           enum: ['yoy_growth', 'cagr', 'indexed', 'correlation', 'ratio', 'share', 'difference'],
         },
-
-        // yoy_growth | indexed | cagr
         series: POINT_ARRAY,
-
-        // cagr
         start: { type: 'string' },
         end: { type: 'string' },
-
-        // indexed
         base_period: { type: 'string' },
-
-        // correlation
-        a: {
-          oneOf: [POINT_ARRAY, BATCHED_SERIES_ARRAY],
-        },
+        a: { oneOf: [POINT_ARRAY, BATCHED_SERIES_ARRAY] },
         b: POINT_ARRAY,
-
-        // ratio
         numerator: { oneOf: [POINT_ARRAY, BATCHED_SERIES_ARRAY] },
         denominator: POINT_ARRAY,
-
-        // share
         part: { oneOf: [POINT_ARRAY, BATCHED_SERIES_ARRAY] },
         total: POINT_ARRAY,
       },
@@ -161,7 +143,7 @@ export const AGENT_TOOLS = [
                     periodDate: { type: 'string' },
                     value: { type: ['number', 'null'] },
                     isEstimate: { type: 'boolean' },
-                    scenario: { type: 'string', enum: ['actual', 'budget', 'revised', 'projection'] },
+                    scenario: { type: 'string', enum: SCENARIOS },
                   },
                 },
               },
@@ -318,7 +300,7 @@ export const AGENT_TOOLS = [
             required: ['tool', 'query', 'top_hits'],
             additionalProperties: false,
             properties: {
-              tool: { type: 'string', enum: ['search_catalog', 'list_comparison_tables'] },
+              tool: { type: 'string', enum: SEARCH_TOOLS },
               query: { type: 'string' },
               top_hits: { type: 'array', items: { type: 'string' } },
             },

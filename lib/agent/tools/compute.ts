@@ -1,16 +1,4 @@
-// Deterministic server-side arithmetic. Pure function. No IO.
-//
-// Ops:
-//   - yoy_growth, indexed          : single series in, single series out
-//   - cagr, correlation            : single pair in, scalar out
-//   - ratio, share, difference     : single OR batched on the varying side
-//
-// Contract: nulls propagate (a null input produces a null output, not zero).
-//           paired ops require aligned periods (same length, same periodDate per index).
-
 import type { Point, ToolError } from '../types';
-
-// --------- Input / output shapes ---------
 
 export type BatchedSeries = { id: string; series: Point[] };
 
@@ -42,8 +30,6 @@ export type ComputeResult =
       | 'invalid_range'
     >;
 
-// --------- Entry point ---------
-
 export function compute(input: ComputeInput): ComputeResult {
   switch (input.operation) {
     case 'yoy_growth': return yoyGrowth(input.series);
@@ -56,8 +42,6 @@ export function compute(input: ComputeInput): ComputeResult {
     default: return { error: 'unknown_operation' } as ComputeResult;
   }
 }
-
-// --------- Ops ---------
 
 function yoyGrowth(series: Point[]): ComputeResult {
   if (!series.length) return { error: 'empty_series' };
@@ -155,7 +139,14 @@ function correlation(a: Point[], b: Point[]): ComputeResult {
   return { operation: 'correlation', result: { n, r: round(r, 6), pairsDropped: dropped } };
 }
 
-// Paired ops — supports single series or batched BatchedSeries[] on the varying side.
+class AlignmentError extends Error {
+  readonly code: 'series_misaligned' | 'empty_series';
+  constructor(code: 'series_misaligned' | 'empty_series', detail: string) {
+    super(detail);
+    this.code = code;
+  }
+}
+
 function paired(
   op: PairedOp,
   varying: Point[] | BatchedSeries[],
@@ -163,38 +154,27 @@ function paired(
 ): ComputeResult {
   if (!shared.length) return { error: 'empty_series' };
 
-  if (isBatched(varying)) {
-    if (!varying.length) return { error: 'empty_series' };
-    const results = varying.map((b) => {
-      const single = singlePaired(op, b.series, shared);
-      if ('error' in single) return { id: b.id, error: single.error, detail: single.detail };
-      return { id: b.id, result: single.result, nulls_propagated: single.nulls_propagated };
-    });
-    // If any entry errored, surface misalignment at the top level — all series must align with the shared side.
-    const firstError = results.find((r) => 'error' in r);
-    if (firstError) {
-      const e = firstError as { error: string; detail?: unknown };
-      return { error: e.error as 'series_misaligned', detail: e.detail } as ComputeResult;
+  try {
+    if (isBatched(varying)) {
+      if (!varying.length) return { error: 'empty_series' };
+      const results = varying.map((b) => ({ id: b.id, ...singlePaired(op, b.series, shared) }));
+      return { operation: op, results };
     }
-    return {
-      operation: op,
-      results: results.map((r) => ({ id: r.id, result: (r as { result: Point[] }).result, nulls_propagated: (r as { nulls_propagated: number }).nulls_propagated })),
-    };
+    return { operation: op, ...singlePaired(op, varying, shared) };
+  } catch (err) {
+    if (err instanceof AlignmentError) return { error: err.code, detail: err.message };
+    throw err;
   }
-
-  const single = singlePaired(op, varying, shared);
-  if ('error' in single) return { error: single.error as 'series_misaligned', detail: single.detail };
-  return { operation: op, result: single.result, nulls_propagated: single.nulls_propagated };
 }
 
 function singlePaired(
   op: PairedOp,
   varying: Point[],
   shared: Point[],
-): { result: Point[]; nulls_propagated: number } | { error: 'series_misaligned' | 'empty_series'; detail?: string } {
-  if (!varying.length || !shared.length) return { error: 'empty_series' };
+): { result: Point[]; nulls_propagated: number } {
+  if (!varying.length || !shared.length) throw new AlignmentError('empty_series', 'one side is empty');
   if (!alignedByDate(varying, shared)) {
-    return { error: 'series_misaligned', detail: `varying has ${varying.length} periods, shared has ${shared.length}` };
+    throw new AlignmentError('series_misaligned', `varying has ${varying.length} periods, shared has ${shared.length}`);
   }
 
   const out: Point[] = [];
@@ -212,16 +192,13 @@ function singlePaired(
 
     if (op === 'ratio' || op === 'share') {
       if (s === 0) { out.push({ periodDate: period, value: null }); nulls++; continue; }
-      const val = v / s;
-      out.push({ periodDate: period, value: round(op === 'share' ? val : val, 6) });
+      out.push({ periodDate: period, value: round(v / s, 6) });
     } else {
       out.push({ periodDate: period, value: round(v - s, 6) });
     }
   }
   return { result: out, nulls_propagated: nulls };
 }
-
-// --------- Helpers ---------
 
 function alignedByDate(a: Point[], b: Point[]): boolean {
   if (a.length !== b.length) return false;

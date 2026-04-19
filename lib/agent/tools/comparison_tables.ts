@@ -1,5 +1,3 @@
-// list_comparison_tables and get_comparison_table. Search goes through search_catalog; these are list/read.
-
 import { INDICATOR_CATEGORIES, type IndicatorCategory, type ToolError } from '../types';
 
 export type ComparisonTableSummary = {

@@ -1,7 +1,4 @@
-// Unified search across indicators and comparison tables. Single search tool for the agent.
-// Behind Postgres FTS + trigram. Merges the two ranked lists, sorts by score, returns a limited set.
-
-import { INDICATOR_CATEGORIES, type CatalogKind, type Frequency, type IndicatorCategory, type ToolError } from '../types';
+import { CATALOG_KINDS, INDICATOR_CATEGORIES, type CatalogKind, type Frequency, type IndicatorCategory, type ToolError } from '../types';
 
 export type IndicatorRow = {
   id: string;
@@ -63,7 +60,7 @@ export async function searchCatalog(
   }
 
   const limit = Math.max(1, Math.min(MAX_LIMIT, input.limit ?? DEFAULT_LIMIT));
-  const kinds = input.kinds && input.kinds.length ? input.kinds : (['indicator', 'comparison_table'] as CatalogKind[]);
+  const kinds = input.kinds && input.kinds.length ? input.kinds : CATALOG_KINDS;
 
   // Over-fetch from each index so ranking reflects the combined pool rather than per-kind truncation.
   const perSideLimit = limit;

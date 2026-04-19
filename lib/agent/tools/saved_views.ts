@@ -1,5 +1,3 @@
-// list_saved_views and get_saved_view. Scoped by user_email; defense-in-depth check below middleware.
-
 import type { ToolError } from '../types';
 
 export type SavedViewSummary = {
@@ -37,12 +35,14 @@ export async function listSavedViews(
   const email = (input.user_email ?? '').trim().toLowerCase();
   if (!email) return { error: 'invalid_input', detail: 'user_email is required' };
 
-  const allowed = await db.isEmailAllowed(email);
-  if (!allowed) return { error: 'forbidden', detail: 'user_email is not on the allowlist' };
-
   const limit = Math.max(1, Math.min(MAX_LIMIT, input.limit ?? DEFAULT_LIMIT));
+
   try {
-    const views = await db.listSavedViews({ userEmail: email, limit });
+    const [allowed, views] = await Promise.all([
+      db.isEmailAllowed(email),
+      db.listSavedViews({ userEmail: email, limit }),
+    ]);
+    if (!allowed) return { error: 'forbidden', detail: 'user_email is not on the allowlist' };
     return { views };
   } catch (err) {
     return { error: 'fetch_failed', detail: err instanceof Error ? err.message : String(err) };
@@ -64,7 +64,6 @@ export async function getSavedView(
     const view = await db.getSavedView(id);
     if (!view) return { error: 'saved_view_not_found', id };
 
-    // Defense in depth: if a requester email is supplied and it does not match the owner, deny.
     if (input.requester_email) {
       const rq = input.requester_email.trim().toLowerCase();
       const owner = view.ownerEmail.trim().toLowerCase();

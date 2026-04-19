@@ -1,12 +1,4 @@
-// render_chart, render_table, render_commentary.
-// These tools validate a payload, emit a render_id, and surface warnings.
-// They do not produce DOM; the SSE layer maps render_ids to UI components (prompt 4).
-
 import { newRenderId, type Scenario, type ToolError } from '../types';
-
-// ================================================================
-// render_chart
-// ================================================================
 
 export type ChartType = 'area' | 'line' | 'bar' | 'bar-paired' | 'dual' | 'indexed';
 
@@ -82,10 +74,6 @@ export function renderChart(input: RenderChartInput): RenderChartResult {
   };
 }
 
-// ================================================================
-// render_table
-// ================================================================
-
 export type TableColumnFormat = 'text' | 'number' | 'percent' | 'currency_gyd' | 'currency_usd' | 'date';
 
 export type RenderTableInput = {
@@ -115,21 +103,19 @@ export function renderTable(input: RenderTableInput): RenderTableResult {
   }
 
   const colKeys = new Set(input.columns.map((c) => c.key));
+  const nullsPerCol = new Map<string, number>();
   for (const row of input.rows) {
     for (const k of Object.keys(row)) {
       if (!colKeys.has(k)) return { error: 'unknown_column_key', key: k };
     }
-  }
-
-  const warnings: string[] = [];
-  const nullsPerCol = new Map<string, number>();
-  for (const row of input.rows) {
     for (const c of input.columns) {
       if (row[c.key] === null || row[c.key] === undefined) {
         nullsPerCol.set(c.key, (nullsPerCol.get(c.key) ?? 0) + 1);
       }
     }
   }
+
+  const warnings: string[] = [];
   nullsPerCol.forEach((count, key) => {
     if (count === input.rows.length && input.rows.length > 0) {
       warnings.push(`column "${key}" is empty in every row`);
@@ -138,10 +124,6 @@ export function renderTable(input: RenderTableInput): RenderTableResult {
 
   return { render_id: newRenderId(), row_count: input.rows.length, warnings };
 }
-
-// ================================================================
-// render_commentary
-// ================================================================
 
 export type RenderCommentaryInput = {
   text: string;
@@ -160,41 +142,30 @@ export function renderCommentary(input: RenderCommentaryInput): RenderCommentary
   const text = (input.text ?? '').trim();
   if (!text) return { error: 'commentary_empty' };
 
-  const words = text.split(/\s+/).filter(Boolean);
-  const count = words.length;
+  const count = text.split(/\s+/).filter(Boolean).length;
   if (count > MAX_COMMENTARY_WORDS) return { error: 'commentary_too_long', word_count: count, limit: MAX_COMMENTARY_WORDS };
 
-  const style_warnings = lintHouseStyle(text, input.word_count_target ?? 150);
+  const style_warnings = lintHouseStyle(text, count, input.word_count_target ?? 150);
   return { render_id: newRenderId(), word_count: count, style_warnings };
 }
 
-function lintHouseStyle(text: string, target: number): string[] {
+function lintHouseStyle(text: string, wordCount: number, target: number): string[] {
   const warnings: string[] = [];
 
-  // Emdash — including en-dash in prose contexts.
   if (/[\u2014]/.test(text)) warnings.push('emdash detected (use commas, semicolons, or new sentences)');
 
-  // "not X, it is Y" and minor variants.
   if (/\bnot\s+[^,.]{1,60},\s*it\s+is\b/i.test(text)) {
     warnings.push('"not X, it is Y" construction detected');
   }
 
-  // Comma-formatted years (1,970 → should be 1970).
   if (/\b(1|2)\d,\d{3}\b/.test(text)) warnings.push('year appears comma-formatted');
 
-  // Currency symbol house style.
-  if (/\bG[yY]\$/i.test(text) && !/\bG\$/.test(text)) {
-    warnings.push('GY$ / Gy$ seen; house style is G$');
-  } else if (/\bGY\$/i.test(text)) {
-    warnings.push('GY$ / Gy$ seen; house style is G$');
-  }
+  if (/\bG[yY]\$/.test(text)) warnings.push('GY$ / Gy$ seen; house style is G$');
 
-  // Word count target band.
-  const words = text.split(/\s+/).filter(Boolean).length;
   const low = Math.max(80, Math.round(target * 0.7));
   const high = Math.min(250, Math.round(target * 1.3));
-  if (words < low) warnings.push(`word count ${words} below target band (${low}-${high})`);
-  if (words > high) warnings.push(`word count ${words} above target band (${low}-${high})`);
+  if (wordCount < low) warnings.push(`word count ${wordCount} below target band (${low}-${high})`);
+  if (wordCount > high) warnings.push(`word count ${wordCount} above target band (${low}-${high})`);
 
   return warnings;
 }

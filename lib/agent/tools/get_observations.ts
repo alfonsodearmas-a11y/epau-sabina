@@ -1,6 +1,3 @@
-// Fetch observation series for one or more indicators, with metadata and staleness notes.
-// Missing ids and empty-range fetches are surfaced in `missing` so the agent can route to flag_unavailable.
-
 import type { Frequency, IndicatorCategory, Point, Scenario, ToolError } from '../types';
 
 export type IndicatorMeta = {

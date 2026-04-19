@@ -1,8 +1,4 @@
-// flag_unavailable — the anti-hallucination guardrail.
-// Strictly rejects calls with an empty `searched` array; the agent must have
-// actually searched before declaring data unavailable.
-
-import { newRenderId, type ToolError } from '../types';
+import { SEARCH_TOOLS, newRenderId, type SearchTool, type ToolError } from '../types';
 
 type MissingItem = {
   requested: string;
@@ -14,7 +10,7 @@ type MissingItem = {
 };
 
 type SearchedItem = {
-  tool: 'search_catalog' | 'list_comparison_tables';
+  tool: SearchTool;
   query: string;
   top_hits: string[];
 };
@@ -59,7 +55,7 @@ export function flagUnavailable(input: FlagUnavailableInput): FlagUnavailableRes
     };
   }
   for (const s of input.searched) {
-    if (!s || !['search_catalog', 'list_comparison_tables'].includes(s.tool)) {
+    if (!s || !SEARCH_TOOLS.includes(s.tool)) {
       return { error: 'flag_unavailable_invalid', detail: 'searched.tool must be search_catalog or list_comparison_tables' };
     }
     if (typeof s.query !== 'string' || !s.query.trim()) {

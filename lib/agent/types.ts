@@ -1,27 +1,16 @@
-// Shared types for agent tools. Kept framework-free so tests don't drag Prisma in.
+import { IndicatorCategory, Frequency, Scenario } from '@prisma/client';
 
-export type IndicatorCategory =
-  | 'real_economy'
-  | 'external'
-  | 'prices'
-  | 'monetary'
-  | 'fiscal'
-  | 'debt'
-  | 'social';
+export { IndicatorCategory, Frequency, Scenario };
 
-export const INDICATOR_CATEGORIES: IndicatorCategory[] = [
-  'real_economy',
-  'external',
-  'prices',
-  'monetary',
-  'fiscal',
-  'debt',
-  'social',
-];
+export const INDICATOR_CATEGORIES = Object.values(IndicatorCategory) as IndicatorCategory[];
+export const SCENARIOS = Object.values(Scenario) as Scenario[];
+export const FREQUENCIES = Object.values(Frequency) as Frequency[];
 
-export type Frequency = 'annual' | 'quarterly' | 'monthly';
-export type Scenario = 'actual' | 'budget' | 'revised' | 'projection';
 export type CatalogKind = 'indicator' | 'comparison_table';
+export const CATALOG_KINDS: CatalogKind[] = ['indicator', 'comparison_table'];
+
+export type SearchTool = 'search_catalog' | 'list_comparison_tables';
+export const SEARCH_TOOLS: SearchTool[] = ['search_catalog', 'list_comparison_tables'];
 
 export type Point = { periodDate: string; value: number | null };
 
@@ -35,6 +24,5 @@ export function isToolError(x: unknown): x is ToolError {
 }
 
 export function newRenderId(): string {
-  // Node 20+ has global crypto.
   return `rnd_${globalThis.crypto.randomUUID()}`;
 }
