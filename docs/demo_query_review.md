@@ -139,3 +139,63 @@ And one voice fix:
 6. **No hype register** in commentary. Banned words list.
 
 Each goes in its own commit. Re-run affected queries after each.
+
+---
+
+## Pass 2 (after `76ea231` prompt tightening + `7b799a7` schema fixes)
+
+| Query | Tool calls | Wall | Verdict | Change from pass 1 |
+|-------|------------|------|---------|---------------------|
+| Q1 simple factual   | 2  | 12.1s | **pass** | Preamble gone, source attribution gone, definition padding gone. Still returns both 12-month and annual-average rates when only the default was asked — left in because it's a brief single sentence. |
+| Q2 comparative      | 4  | 23.9s | needs-tuning | Chart only (no duplicate table). But still emits "I'll compare..." preamble; "19 times faster" / "400 percent cumulative" / "15 percent" still hand-computed; adds "unprecedented"; still no compute call in the whole turn. |
+| Q3 report           | 4  | 24.2s | fail | Commentary still uses "exceptional growth", "safeguarding" (banned), "transformative", "effective portfolio management"; still streams a post-commentary recap paragraph ("I've drafted a 168-word note…"); still hand-sums cumulative deposits (US$6.05 B). |
+| Q4 structural       | 14 | 53.7s | fail | Compute still failing — `"part": "[{...}]"` still sent as stringified JSON despite the schema description. Streams "The compute tool is not working as expected. Let me present the analysis based on the data retrieved." |
+| Q5 unavailable      | 2  | 9.1s  | **pass** | `closest_available: []`; no bare-why entry; no preamble. |
+
+Q1, Q5 landed on pass. Q2, Q3, Q4 all still failing.
+
+## Pass 3 (after `371bd06` harder narration + hype list + `091c2a1` compute string-parse fallback)
+
+| Query | Tool calls | Wall | Verdict | Change from pass 2 |
+|-------|------------|------|---------|---------------------|
+| Q1 simple factual   | 2 | 10.5s | **pass** | Now returns only the 12-month default (1.98 percent). One sentence. |
+| Q2 comparative      | 4 | 26.5s | fail | Still preamble, still hand-computed averages/multipliers, still **zero compute calls** in the whole turn. Fabrication added: "Liza Phase 1", "oil is presold under long-term contracts". |
+| Q3 report           | 3 | 21.7s | fail | Final streaming text is now empty (good). But commentary itself still has "disciplined stewardship", "exemplary asset growth", "critical infrastructure, economic diversification, and social programmes" (fabricated allocation list), "transformative national development", "effective dual mandate", "disciplined drawdown in service of long-term prosperity". Still hand-sums cumulative figures. |
+| Q4 structural       | 3 | 25.6s | fail | **Compute stringification now tolerated** — one batched `share` call covers all components and succeeds. But agent renders no table and derived pp changes (+5.2, −3.5, −2.3) still hand-computed from the share output. Still has preamble. |
+| Q5 unavailable      | 2 | 8.9s  | **pass** | Unchanged. |
+
+## Pass 4 (after `caba09c` spelled-out no-narration rule, multiplier-as-derived, editorialising-constraint)
+
+| Query | Tool calls | Wall | Verdict | Change from pass 3 |
+|-------|------------|------|---------|---------------------|
+| Q1 simple factual   | 2 | 10.6s | **pass** | "Inflation in 2023 was 1.98 percent on a 12-month basis (December-on-December) and 2.86 percent on an annual-average basis." Definition parenthetical creeps back; brief enough that I am not flagging. |
+| Q2 comparative      | 4 | 24.4s | fail | Preamble ("I'll retrieve…") **still emitted**. Prose cleaned up — no more "Liza Phase 1", no more "unprecedented" — but still hand-computes 13× multiplier, averages over 2014–2019, 2022–2024 range labels. No compute call. |
+| Q3 report           | 5 | 25.1s | fail | Two compute calls (yoy_growth + difference on closing balance) — improvement. But commentary text still leads with "exceptional performance as the cornerstone of Guyana's sovereign wealth management framework" (both banned words), adds fabricated "critical development priorities across infrastructure, health, education, housing, and agriculture", "in accordance with the Natural Resource Fund Act", and closes with "affirms Government's commitment to transparent, rules-based management of petroleum revenues for the benefit of all Guyanese." |
+| Q4 structural       | 5 | 32.7s | needs-tuning | No preamble now. Two compute share calls, both succeed. Output is cleanly structured. But pp-change figures (+5.2, −3.5, −0.4) are still hand-computed — no `difference` call. Also chose a different third component ("Households −0.4 pp") than earlier passes ("Other forms −2.3 pp"); both are defensible. |
+| Q5 unavailable      | 2 | 10.6s | **pass** | Unchanged. |
+
+---
+
+## Final verdict
+
+| Query | Tool calls (last pass) | Wall | Verdict |
+|-------|------------------------|------|---------|
+| Q1 simple factual   | 2 | 10.6s | pass |
+| Q2 comparative      | 4 | 24.4s | **fail** (escalated) |
+| Q3 report           | 5 | 25.1s | **fail** (escalated) |
+| Q4 structural       | 5 | 32.7s | **needs-tuning** (escalated) |
+| Q5 unavailable      | 2 | 10.6s | pass |
+
+Escalating Q2, Q3, Q4 per the "three passes without a pass" rule.
+
+## Escalation notes
+
+Three residual failure modes survive three passes of prompt tightening:
+
+1. **Preamble narration (Q2).** "I'll retrieve Guyana's GDP growth…" is emitted before any tool call, every pass. The rule has been stated, expanded, and spelled out in terms of tool_use-content-block order. Claude ignores it on Q2 specifically (not on Q1/Q3/Q4/Q5). My best guess: the "Compare…and tell me what's notable" phrasing cues Claude into a two-step flow (retrieve, then analyse) and it narrates the first step. A prompt-only fix may not cover it cleanly; worth considering a streaming-side filter that drops text blocks emitted before the first tool call.
+
+2. **Derived figures computed in head (Q2, Q4, parts of Q3).** Averages, multipliers, percentage-point differences, and multi-year sums still appear without corresponding compute calls. The prompt's "derived values are numeric values" rule is explicit with examples, and Claude partly complies (Q3 now computes the four-year difference, Q4 computes shares) but does not fully generalise. The cleanest mechanical fix is a post-hoc validator: scan the final text for numbers that cannot be traced to the turn's compute/get_observations outputs and surface those as a turn-level lint warning (non-blocking). Out of scope for prompt-only tuning.
+
+3. **Speechwriter voice in commentary (Q3).** Banned-word list plus editorialising constraint plus explicit list of forbidden phrases ("critical infrastructure", "social programmes", "in accordance with the NRF Act", "for the benefit of all Guyanese") did not stop Claude from emitting those exact phrases in Q3. The pattern is strongest when the user asks Claude to "draft for a budget speech" — Claude register-switches into speechwriter voice and overrides the EPAU house-style rule. A tighter fix might be to re-frame the commentary tool itself: rename `render_commentary` to `render_briefing_paragraph` and have its tool description say "house style only; no speechwriter register; if the user asked for speech copy, produce the briefing paragraph and let them convert it". That is a tool-scope change and outside this iteration's brief.
+
+Recommendation: merge the four tuning commits, then decide whether to invest in (a) a streaming-side pre-tool-call text-block filter and/or (b) a post-hoc derived-figure validator, and (c) whether to rename/reframe the commentary tool before prompt 6 runs.
