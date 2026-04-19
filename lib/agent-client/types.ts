@@ -45,10 +45,10 @@ export type AssistantSegment =
  * breaks the run and starts a new text segment after it.
  *
  * Audit retries: when an `audit` event with result === 'failed' arrives, we
- * discard any text accumulated so far in the current run. The assumption is
- * that the agent is about to retry and the user should see only the
- * post-retry prose. Already-rendered cards (chart/table/commentary) stay in
- * the timeline since they were legitimately produced.
+ * reset the assistant timeline entirely — discarding both accumulated text
+ * and any pre-retry renders. The retry produces its own set of renders and
+ * prose, and showing both the first attempt's work and the retry's output
+ * confuses the reader (e.g. two charts on the same question).
  */
 export function assistantSegments(events: AgentEvent[]): AssistantSegment[] {
   let out: AssistantSegment[] = [];
@@ -66,7 +66,7 @@ export function assistantSegments(events: AgentEvent[]): AssistantSegment[] {
       out.push({ kind: 'render', event: e });
     } else if (e.type === 'audit' && e.result === 'failed') {
       buf = '';
-      out = out.filter((seg) => seg.kind === 'render');
+      out = [];
     }
   }
   flush();

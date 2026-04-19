@@ -22,16 +22,17 @@ describe('assistantSegments', () => {
     expect(segs[2]).toEqual({ kind: 'text', text: 'After.' });
   });
 
-  it('discards text preceding an audit failed event; keeps renders', () => {
+  it('resets the full timeline on an audit failed event (text and renders both)', () => {
     const segs = assistantSegments([
       { type: 'text_delta', text: 'Bad first attempt text.' },
       { type: 'render', render_id: 'r1', kind: 'chart', payload: {} },
       { type: 'audit', result: 'failed', unground: [] },
       { type: 'text_delta', text: 'Clean retry text.' },
+      { type: 'render', render_id: 'r2', kind: 'chart', payload: {} },
     ]);
     expect(segs).toHaveLength(2);
-    expect(segs[0]!.kind).toBe('render');
-    expect(segs[1]).toEqual({ kind: 'text', text: 'Clean retry text.' });
+    expect(segs[0]).toEqual({ kind: 'text', text: 'Clean retry text.' });
+    expect(segs[1]!.kind).toBe('render');
   });
 
   it('skips status and tool events from assistant segments', () => {
