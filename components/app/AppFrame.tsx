@@ -1,14 +1,16 @@
 'use client';
 
 // Application frame wrapping every route. Owns the Cmd+K / Escape keybinding
-// wiring and renders the top nav, the palette modal portal, and the bottom
-// status bar around the page's children.
+// wiring and renders the top nav, the palette modal portal, the chat panel,
+// and the bottom status bar around the page's children.
 
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { TopNav } from '@/components/layout/TopNav';
 import { BottomStatus } from '@/components/layout/BottomStatus';
 import { CommandPalette } from '@/components/layout/CommandPalette';
+import { ChatPanel } from '@/components/chat/ChatPanel';
+import { ChatPanelSpacer } from '@/components/chat/ChatPanelSpacer';
 
 export interface AppFrameProps {
   children: ReactNode;
@@ -32,7 +34,10 @@ export function AppFrame({ children }: AppFrameProps) {
   return (
     <div className="min-h-screen">
       <TopNav onOpenPalette={() => setPaletteOpen(true)} />
-      <main>{children}</main>
+      <ChatPanelSpacer>
+        <main>{children}</main>
+      </ChatPanelSpacer>
+      <ChatPanel />
       {paletteOpen ? (
         <CommandPalette onClose={() => setPaletteOpen(false)} />
       ) : null}
