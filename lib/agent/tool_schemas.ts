@@ -102,7 +102,13 @@ export const AGENT_TOOLS = [
     name: 'render_chart',
     description:
       'Emit a chart to the chat panel. Must carry every observation inline; do not pre-summarise. ' +
-      'chart_type: area | line | bar | bar-paired | dual | indexed.',
+      'chart_type: ' +
+      'area (single monetary/stock series, cumulative feel); ' +
+      'line (one or more series on a shared axis with matching units — the default for percent-vs-percent or currency-vs-same-currency comparisons); ' +
+      'bar (discrete period comparisons); ' +
+      'bar-paired (two scenarios on the same indicator, e.g. actual vs budget); ' +
+      'dual (two series on a shared time axis but SEPARATE y-axes, used ONLY when the two series have genuinely different units, e.g. one in percent and one in G$ millions, or one in US$ millions and one in a ratio — do NOT use dual for two series that share the same unit; use line for same-unit comparisons); ' +
+      'indexed (rebased to 100 at a base period).',
     input_schema: {
       type: 'object',
       required: ['chart_type', 'title', 'series'],
