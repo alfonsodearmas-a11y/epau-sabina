@@ -118,12 +118,14 @@ function isExcluded(kind: AuditTokenKind, value: number, raw: string, text: stri
   // Single-digit enumeration integers ("three shifts", "1.", "2.").
   if (kind === 'raw' && isInteger && Math.abs(value) < 10) return true;
 
-  // Measurement-period labels: "12-month rate", "10-year bond", "24-hour".
+  // Measurement-period labels: "12-month rate", "10-year bond", "24-hour",
+  // and UX targets: "200-word target".
   // If the integer is immediately followed by "-month" / "-year" / "-day" /
-  // "-week" / "-hour" / "-quarter", treat as a label, not a data claim.
+  // "-week" / "-hour" / "-quarter" / "-word", treat as a label, not a data
+  // claim.
   if (kind === 'raw' && isInteger) {
     const tail = text.slice(end, end + 10).toLowerCase();
-    if (/^-(month|year|day|week|hour|quarter)s?\b/.test(tail)) return true;
+    if (/^-(month|year|day|week|hour|quarter|word)s?\b/.test(tail)) return true;
   }
 
   // Inside a list marker like "**1.** Services" — preceded by "**" then the
@@ -194,9 +196,11 @@ function matches(candidate: number, allowed: number[]): boolean {
   for (const v of allowed) {
     if (!Number.isFinite(v)) continue;
     const av = Math.abs(v);
-    const tol = av < 10 ? 0.05 : Math.max(0.5, av * 0.005);
+    // Tolerance bands: ±0.05 absolute for |v|<10 (ordinary rounding of small
+    // percents), otherwise ±2% relative with a 0.5 absolute floor. 2% covers
+    // user-facing rounding like US$2.57 billion → "US$2.6 billion".
+    const tol = av < 10 ? 0.05 : Math.max(0.5, av * 0.02);
     if (Math.abs(candidate - v) <= tol) return true;
-    // Also allow sign-flipped matches: "contracted 2.7 percent" vs -2.7.
     if (Math.abs(candAbs - av) <= tol) return true;
   }
   return false;

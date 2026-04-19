@@ -22,6 +22,18 @@ describe('assistantSegments', () => {
     expect(segs[2]).toEqual({ kind: 'text', text: 'After.' });
   });
 
+  it('discards text preceding an audit failed event; keeps renders', () => {
+    const segs = assistantSegments([
+      { type: 'text_delta', text: 'Bad first attempt text.' },
+      { type: 'render', render_id: 'r1', kind: 'chart', payload: {} },
+      { type: 'audit', result: 'failed', unground: [] },
+      { type: 'text_delta', text: 'Clean retry text.' },
+    ]);
+    expect(segs).toHaveLength(2);
+    expect(segs[0]!.kind).toBe('render');
+    expect(segs[1]).toEqual({ kind: 'text', text: 'Clean retry text.' });
+  });
+
   it('skips status and tool events from assistant segments', () => {
     const segs = assistantSegments([
       { type: 'status', message: 'Searching…' },

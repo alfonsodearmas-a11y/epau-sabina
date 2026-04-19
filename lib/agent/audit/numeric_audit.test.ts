@@ -108,6 +108,20 @@ describe('runNumericAudit', () => {
     expect(r.grounded[0]!.value).toBeCloseTo(3099.8 * 1e6, 0);
   });
 
+  it('accepts 2% user-facing rounding: "US$2.6 billion" matches DB value 2569470.9 (thousands)', () => {
+    const allowed = collectAllowedValues([
+      { tool: 'get_observations', output: { series: [{ observations: [{ value: 2569470.9 }] }] } },
+    ]);
+    const r = runNumericAudit('Deposits reached US$2.6 billion in 2024.', allowed);
+    expect(r.pass).toBe(true);
+  });
+
+  it('excludes "200-word target" labels', () => {
+    const allowed = collectAllowedValues([{ tool: 'get_observations', output: { series: [{ observations: [{ value: 1.98 }] }] } }]);
+    const r = runNumericAudit('Slightly below the 200-word target. 1.98 percent.', allowed);
+    expect(r.pass).toBe(true);
+  });
+
   it('excludes compound period labels like "12-month" and "10-year"', () => {
     const allowed = collectAllowedValues([{ tool: 'get_observations', output: { series: [{ observations: [{ value: 1.977 }] }] } }]);
     const r = runNumericAudit('The 12-month inflation rate in 2023 was 1.98 percent.', allowed);

@@ -43,9 +43,15 @@ export type AssistantSegment =
  * Fold an assistant's ordered events into text runs and render cards.
  * Consecutive text_delta events merge into one `text` segment; a `render` event
  * breaks the run and starts a new text segment after it.
+ *
+ * Audit retries: when an `audit` event with result === 'failed' arrives, we
+ * discard any text accumulated so far in the current run. The assumption is
+ * that the agent is about to retry and the user should see only the
+ * post-retry prose. Already-rendered cards (chart/table/commentary) stay in
+ * the timeline since they were legitimately produced.
  */
 export function assistantSegments(events: AgentEvent[]): AssistantSegment[] {
-  const out: AssistantSegment[] = [];
+  let out: AssistantSegment[] = [];
   let buf = '';
   const flush = () => {
     if (buf.length) {
@@ -58,6 +64,9 @@ export function assistantSegments(events: AgentEvent[]): AssistantSegment[] {
     else if (e.type === 'render') {
       flush();
       out.push({ kind: 'render', event: e });
+    } else if (e.type === 'audit' && e.result === 'failed') {
+      buf = '';
+      out = out.filter((seg) => seg.kind === 'render');
     }
   }
   flush();
