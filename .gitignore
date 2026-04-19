@@ -28,3 +28,4 @@ scripts/ingest/output/
 # match this pattern and do commit.
 docs/audit_reports/catalog_audit_*.md
 docs/audit_reports/reconcile_*.md
+.vercel
