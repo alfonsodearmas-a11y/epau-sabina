@@ -12,8 +12,6 @@ import { prisma } from '@/lib/db';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const HISTORY_TURN_LIMIT = 10;
-
 type Surface = 'workbench' | 'catalog' | 'saved' | 'comparisons' | 'admin';
 const VALID_SURFACES: Surface[] = ['workbench', 'catalog', 'saved', 'comparisons', 'admin'];
 
@@ -122,31 +120,10 @@ export async function POST(req: Request) {
   return response;
 }
 
-async function loadHistory(sessionId: string): Promise<Anthropic.Messages.MessageParam[]> {
-  const traces = await prisma.agentTrace.findMany({
-    where: { sessionId, role: { in: ['user', 'assistant'] } },
-    orderBy: [{ turnIndex: 'asc' }, { stepIndex: 'asc' }],
-  });
-
-  const byTurn = new Map<number, { user?: string; assistant?: string }>();
-  for (const t of traces) {
-    const entry = byTurn.get(t.turnIndex) ?? {};
-    const content = t.content as { text?: string } | null;
-    if (t.role === 'user' && content?.text) entry.user = content.text;
-    if (t.role === 'assistant' && content?.text) entry.assistant = content.text;
-    byTurn.set(t.turnIndex, entry);
-  }
-
-  const turnsAsc = Array.from(byTurn.keys()).sort((a, b) => a - b);
-  const recent = turnsAsc.slice(-HISTORY_TURN_LIMIT);
-
-  const messages: Anthropic.Messages.MessageParam[] = [];
-  for (const i of recent) {
-    const entry = byTurn.get(i)!;
-    if (entry.user) messages.push({ role: 'user', content: entry.user });
-    if (entry.assistant) messages.push({ role: 'assistant', content: entry.assistant });
-  }
-  return messages;
+// History disabled in v1 — prior-turn text was bleeding into grounding-rule
+// enforcement. See docs/agent_design.md §4 data grounding rule.
+async function loadHistory(_sessionId: string): Promise<Anthropic.Messages.MessageParam[]> {
+  return [];
 }
 
 function jsonError(status: number, code: string, detail: string): Response {
