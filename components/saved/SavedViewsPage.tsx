@@ -21,17 +21,17 @@ export function SavedViewsPage() {
   }, []);
 
   return (
-    <div className="px-8 pt-6 pb-16 max-w-[1400px] mx-auto">
-      <div className="flex items-end justify-between mb-5">
+    <div className="px-4 md:px-8 pt-6 pb-16 md:pb-24 max-w-[1400px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
         <div>
           <div className="text-[11.5px] uppercase tracking-[0.18em] text-text-tertiary">
             Saved Views
           </div>
-          <h1 className="font-serif text-[34px] leading-[1.1] text-text-primary mt-1">
+          <h1 className="font-serif text-[28px] md:text-[34px] leading-[1.1] text-text-primary mt-1">
             Queries you re-run.
           </h1>
         </div>
-        <button className="h-9 px-4 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary hover:text-text-primary hover:border-white/20 text-[12.5px] flex items-center gap-1.5 transition-colors">
+        <button className="h-11 md:h-9 px-4 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary hover:text-text-primary hover:border-white/20 text-[13px] md:text-[12.5px] flex items-center gap-1.5 self-start transition-colors">
           <RefreshIcon className="w-3.5 h-3.5" /> Re-run all
         </button>
       </div>
@@ -41,7 +41,7 @@ export function SavedViewsPage() {
           No saved views yet. Run a query on the Workbench and pin it.
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {views.map((v) => (<SavedCard key={v.id} view={v} />))}
         </div>
       )}
