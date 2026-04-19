@@ -16,5 +16,9 @@ export function modelName(): string {
 }
 
 export function composerModelName(): string {
-  return process.env.COMMENTARY_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001';
+  // Haiku trial regressed Q3 — the composer invented derived figures not
+  // in the brief (e.g. 2.6B+0.14B-1.6B = 1.1B) and the audit correctly
+  // flagged them. Default to the main model; expose the env var so this
+  // can be revisited when Haiku follow-the-brief reliability improves.
+  return process.env.COMMENTARY_MODEL ?? modelName();
 }
