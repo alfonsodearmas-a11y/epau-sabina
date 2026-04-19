@@ -85,7 +85,9 @@ function extractTokens(text: string): AuditToken[] {
         }
       }
 
-      if (isExcluded(kind, value, numRaw, text, start)) continue;
+      // Note: pass the formatted match length (m.groups.num) not numRaw
+      // (commas stripped) so head/tail position maths are correct.
+      if (isExcluded(kind, value, m.groups?.num ?? numRaw, text, start)) continue;
 
       const contextStart = Math.max(0, start - 20);
       const contextEnd = Math.min(text.length, start + (m[0]?.length ?? 0) + 20);
