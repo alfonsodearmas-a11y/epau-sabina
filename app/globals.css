@@ -15,6 +15,19 @@ html, body, #__next {
   letter-spacing: 0.005em;
 }
 
+/* Safe-area helpers. Applied at the main-content level so the TopNav can sit
+ * edge-to-edge under the iOS status bar while content stays clear of the
+ * notch and home indicator. */
+.safe-top    { padding-top:    env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-x      { padding-left:   env(safe-area-inset-left);  padding-right: env(safe-area-inset-right); }
+
+/* Input font-size < 16px triggers iOS auto-zoom on focus. Keep form fields ≥
+ * 16px on mobile; desktop keeps the compact sizing via a media query override. */
+@media (max-width: 767px) {
+  input, textarea, select { font-size: 16px; }
+}
+
 body {
   background:
     radial-gradient(1200px 700px at 85% -10%, rgba(212, 175, 55, 0.07), transparent 60%),

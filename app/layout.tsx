@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Outfit, DM_Serif_Display, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { AppFrame } from '@/components/app/AppFrame';
@@ -10,6 +10,15 @@ const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrai
 export const metadata: Metadata = {
   title: 'EPAU Analyst Workbench',
   description: 'Economic Policy and Analysis Unit — internal analyst workbench',
+};
+
+// viewport-fit=cover lets body background extend under iOS safe areas; child
+// layouts use env(safe-area-inset-*) padding to clear the notch and home bar.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#0A0E1A',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
