@@ -4,7 +4,7 @@
 // we auto-pick whichever col has more non-empty cells across the scan region.
 import type { WorkBook, WorkSheet } from 'xlsx';
 import type { Category, IngestContext, ComparisonTableRecord, ComparisonTableRowRecord } from './types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from './cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from './cells';
 import { coerceHeaderToPeriod } from './dates';
 import { coerceNumber } from './numbers';
 
@@ -105,10 +105,11 @@ export function runComparison(book: WorkBook, cfg: ComparisonConfig, ctx: Ingest
       if (raw === null || raw === undefined || raw === '') continue;
       let value: number | null = null;
       let valueText: string | null = null;
+      const fmt = cellFormat(sheet, r, col.col);
       if (typeof raw === 'number') {
-        value = raw;
+        value = coerceNumber(raw, { sheet: cfg.sheet, r, c: col.col }, ctx, { format: fmt });
       } else {
-        const asNum = coerceNumber(raw, { sheet: cfg.sheet, r, c: col.col }, ctx, 'info');
+        const asNum = coerceNumber(raw, { sheet: cfg.sheet, r, c: col.col }, ctx, { severity: 'info', format: fmt });
         if (asNum !== null) value = asNum; else valueText = String(raw);
       }
       rows.push({

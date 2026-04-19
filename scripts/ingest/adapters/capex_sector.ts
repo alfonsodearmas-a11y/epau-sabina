@@ -3,7 +3,7 @@
 // Data rows start at r=9; col 0 may carry a sector-number prefix.
 import type { WorkBook } from 'xlsx';
 import type { IngestContext } from '../lib/types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
 import { slugify } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
 import { extractYearColumns } from '../lib/headers';
@@ -36,7 +36,7 @@ export function runCapexSector(book: WorkBook, ctx: IngestContext): void {
     for (const yc of yearCols) {
       const raw = cellAt(sheet, r, yc.col);
       if (raw === null || raw === undefined || raw === '') continue;
-      const value = coerceNumber(raw, { sheet: SHEET, r, c: yc.col }, ctx);
+      const value = coerceNumber(raw, { sheet: SHEET, r, c: yc.col }, ctx, { format: cellFormat(sheet, r, yc.col) });
       if (value === null) continue;
       ctx.observations.push({
         indicatorId: id, periodDate: yc.periodDate, periodLabel: yc.periodLabel,

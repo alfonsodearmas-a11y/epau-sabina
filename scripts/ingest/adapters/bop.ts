@@ -2,7 +2,7 @@
 // Header at row 5: "Year | Period | Current Account | Capital Account | Errors And Omission | Overall Balance"
 import type { WorkBook } from 'xlsx';
 import type { IngestContext } from '../lib/types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
 import { slugify, isoToQuarter, yearToAnnual } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
 
@@ -63,7 +63,7 @@ export function runBOP(book: WorkBook, ctx: IngestContext): void {
     for (const lbl of labels) {
       const raw = cellAt(sheet, r, lbl.col);
       if (raw === null || raw === undefined || raw === '') continue;
-      const value = coerceNumber(raw, { sheet: SHEET, r, c: lbl.col }, ctx);
+      const value = coerceNumber(raw, { sheet: SHEET, r, c: lbl.col }, ctx, { format: cellFormat(sheet, r, lbl.col) });
       if (value === null) continue;
       const id = `bop_${slugify(lbl.name)}`;
       ctx.observations.push({

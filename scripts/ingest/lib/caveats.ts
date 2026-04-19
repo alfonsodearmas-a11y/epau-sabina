@@ -44,3 +44,23 @@ export function parseListOfSheets(book: WorkBook, ctx: IngestContext): void {
     }
   }
 }
+
+// Indicator-level caveat overrides. Sheet-level caveats from 'List of Sheets'
+// are the baseline; entries here pin a specific series that needs extra context
+// beyond what the sheet's note provides.
+export const INDICATOR_CAVEATS: Record<string, string> = {
+  psc_total_private_sector_credit:
+    'Component reporting categories were reclassified multiple times between 1994 and 2001; ' +
+    'sum of sector components can diverge from the reported total by up to ~17% in that window. ' +
+    'From ~2005 onward the components reconcile to within ~1%.',
+  debt_to_gdp_guyana:
+    'Pre-HIPC debt crisis: Guyana\'s total public debt peaked at ~570% of GDP in the late 1980s / early ' +
+    '1990s. That is the real historical number, not a data error.',
+};
+
+export function applyIndicatorCaveats(ctx: IngestContext): void {
+  for (const [id, caveat] of Object.entries(INDICATOR_CAVEATS)) {
+    const ind = ctx.indicators.get(id);
+    if (ind) ind.caveat = caveat;
+  }
+}

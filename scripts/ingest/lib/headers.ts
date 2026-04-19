@@ -49,8 +49,11 @@ export function parseScenarioHeader(v: unknown): { scenario: Scenario; year: num
   const map: Record<string, Scenario> = {
     actual: 'actual', budget: 'budget', revised: 'revised',
     projected: 'projection', projection: 'projection', project: 'projection',
+    indicative: 'projection',
   };
-  const m = /^(actual|budget|revised|projected|projection|project)\s+(\d{4})$|^(\d{4})\s+(actual|budget|revised|projected|projection|project)$/i.exec(s);
+  // Workbook sometimes omits the space (e.g. "ACTUAL2023"). Accept \s* so the
+  // no-space variant still parses without a dedicated regex in each adapter.
+  const m = /^(actual|budget|revised|projected|projection|project|indicative)\s*(\d{4})$|^(\d{4})\s*(actual|budget|revised|projected|projection|project|indicative)$/i.exec(s);
   if (!m) return null;
   const scenarioText = (m[1] ?? m[4])!.toLowerCase();
   const year = Number(m[2] ?? m[3]);

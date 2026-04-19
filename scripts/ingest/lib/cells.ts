@@ -26,6 +26,14 @@ export function cellAt(sheet: WorkSheet, r: number, c: number): unknown {
   return cell ? cell.v : null;
 }
 
+// Returns the Excel number format string (e.g. "0.00%", "#,##0", "General")
+// for the cell at (r, c), or undefined if none. Used by coerceNumber to detect
+// percent-formatted cells whose raw value is stored as a decimal ratio.
+export function cellFormat(sheet: WorkSheet, r: number, c: number): string | undefined {
+  const cell = sheet[utils.encode_cell({ r, c })] as { z?: string } | undefined;
+  return cell?.z;
+}
+
 export function cellRef(r: number, c: number): string {
   return utils.encode_cell({ r, c });
 }

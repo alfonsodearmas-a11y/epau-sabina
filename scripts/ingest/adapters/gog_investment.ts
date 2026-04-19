@@ -1,7 +1,7 @@
 // GOG Investment: Archetype D — scenarios in row 4 (Actual/Actual/Revised/Budget), years in row 5.
 import type { WorkBook } from 'xlsx';
 import type { IngestContext, Scenario } from '../lib/types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
 import { slugify } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
 import { parseScenarioWord } from '../lib/headers';
@@ -45,7 +45,7 @@ export function runGogInvestment(book: WorkBook, ctx: IngestContext): void {
     for (const hc of headerCols) {
       const raw = cellAt(sheet, r, hc.col);
       if (raw === null || raw === undefined || raw === '') continue;
-      const value = coerceNumber(raw, { sheet: SHEET, r, c: hc.col }, ctx);
+      const value = coerceNumber(raw, { sheet: SHEET, r, c: hc.col }, ctx, { format: cellFormat(sheet, r, hc.col) });
       if (value === null) continue;
       ctx.observations.push({
         indicatorId,

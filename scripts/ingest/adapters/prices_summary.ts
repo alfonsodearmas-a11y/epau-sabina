@@ -6,7 +6,7 @@
 // ignore them and only ingest the monthly time series.
 import type { WorkBook } from 'xlsx';
 import type { IngestContext } from '../lib/types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
 import { coerceHeaderToPeriod, slugify } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
 
@@ -61,7 +61,7 @@ export function runPricesSummary(book: WorkBook, ctx: IngestContext): void {
       for (const yc of yearCols) {
         const raw = cellAt(sheet, dr, yc.col);
         if (raw === null || raw === undefined || raw === '') continue;
-        const value = coerceNumber(raw, { sheet: SHEET, r: dr, c: yc.col }, ctx);
+        const value = coerceNumber(raw, { sheet: SHEET, r: dr, c: yc.col }, ctx, { format: cellFormat(sheet, dr, yc.col) });
         if (value === null) continue;
         const iso = `${yc.year}-${String(monthNum).padStart(2, '0')}-01`;
         const label = `${monthRaw.trim().slice(0, 3)} ${yc.year}`;

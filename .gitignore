@@ -19,3 +19,12 @@ Claude Design /
 Guyana Key Statistics_*.xlsx
 
 scripts/ingest/output/
+
+# Claude Code per-project session state — user-local only.
+.claude/
+
+# Timestamped audit/reconcile snapshots — regenerated on every run. The two
+# Sabina-facing reports (sabina_findings.md, sabina_review_checklist.md) do not
+# match this pattern and do commit.
+docs/audit_reports/catalog_audit_*.md
+docs/audit_reports/reconcile_*.md

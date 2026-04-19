@@ -5,7 +5,7 @@
 // chart it alongside other series. Both sinks share the same source.
 import type { WorkBook } from 'xlsx';
 import type { IngestContext } from '../lib/types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
 import { excelSerialToISO, isoToMonth } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
 
@@ -43,7 +43,7 @@ export function runApnuFuel(book: WorkBook, ctx: IngestContext): void {
     for (const s of SERIES) {
       const raw = cellAt(sheet, r, s.col);
       if (raw === null || raw === undefined || raw === '') continue;
-      const value = coerceNumber(raw, { sheet: SHEET, r, c: s.col }, ctx);
+      const value = coerceNumber(raw, { sheet: SHEET, r, c: s.col }, ctx, { format: cellFormat(sheet, r, s.col) });
       if (value === null) continue;
       ctx.observations.push({
         indicatorId: s.id, periodDate: period.periodDate, periodLabel: period.periodLabel,

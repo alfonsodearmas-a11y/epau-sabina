@@ -14,7 +14,9 @@ export interface LoadedWorkbook {
 export function loadWorkbook(path: string): LoadedWorkbook {
   const buf = readFileSync(path);
   const stat = statSync(path);
-  const book = read(buf, { cellDates: false, cellNF: false, cellText: false });
+  // cellNF exposes each cell's number format (cell.z); coerceNumber reads it
+  // to scale percent-formatted cells.
+  const book = read(buf, { cellDates: false, cellNF: true, cellText: false });
   return { book, filename: basename(path), path, sizeBytes: stat.size };
 }
 

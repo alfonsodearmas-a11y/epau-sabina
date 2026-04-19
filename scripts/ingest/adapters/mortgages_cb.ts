@@ -2,7 +2,7 @@
 // Year in col 1, period ("End-Jun"/"End-Dec") in col 2. Semi-annual data.
 import type { WorkBook } from 'xlsx';
 import type { IngestContext } from '../lib/types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
 import { slugify } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
 
@@ -60,7 +60,7 @@ export function runMortgagesCB(book: WorkBook, ctx: IngestContext): void {
     for (const col of columns) {
       const raw = cellAt(sheet, r, col.col);
       if (raw === null || raw === undefined || raw === '') continue;
-      const value = coerceNumber(raw, { sheet: SHEET, r, c: col.col }, ctx);
+      const value = coerceNumber(raw, { sheet: SHEET, r, c: col.col }, ctx, { format: cellFormat(sheet, r, col.col) });
       if (value === null) continue;
       const id = `mortgages_${slugify(col.bank)}_${slugify(col.metric)}`;
       ctx.observations.push({

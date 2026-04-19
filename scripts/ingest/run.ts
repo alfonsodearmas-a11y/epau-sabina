@@ -17,7 +17,7 @@ import { parseArgs } from 'node:util';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadWorkbook, makeContext } from './lib/context';
-import { parseListOfSheets } from './lib/caveats';
+import { parseListOfSheets, applyIndicatorCaveats } from './lib/caveats';
 import { captureAllSnapshots } from './lib/snapshots';
 import { runArchetypeA, runArchetypeB, runArchetypeC } from './lib/runners';
 import { runMultiBlock } from './lib/multiblock';
@@ -128,6 +128,8 @@ async function main() {
   // Raw snapshots
   captureAllSnapshots(lb.book, ctx);
   console.log(`[ingest] snapshots: ${ctx.snapshots.length} sheets`);
+
+  applyIndicatorCaveats(ctx);
 
   const finishedAt = new Date().toISOString();
   const issues = (ctx as unknown as { issues: import('./lib/types').Issue[] }).issues;

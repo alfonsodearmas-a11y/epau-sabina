@@ -1,15 +1,18 @@
-// NRF (Natural Resource Fund): Archetype D — scenario-header tables.
-// Layout (observed): the sheet has stacked blocks for inflows/outflows/balance,
-// with a header row that mixes year cells and scenario words like "ACTUAL"/"BUDGET"/"PROJECTED".
-// Approach:
-//   1. Scan rows for a composite header: a row containing scenario words + an adjacent row with years.
-//   2. For every (scenario, year) column, ingest the numeric value on indicator rows.
-//   3. Indicator label is col B; rows are skipped if blank or obvious subtotal/subheader.
+// NRF (Natural Resource Fund): Archetype D.
+//
+// Block 1 (rows 7–27) layout:
+//   col B: outline marker ("A"/"B" for INFLOWS/OUTFLOWS; 1/2/3 ordinals)
+//   col C: indicator name (skip this column for the id; col B is markers only)
+//   col D+: scenario-year headers ("ACTUAL 2020", "BUDGET 2022", "ACTUAL2023", etc.)
+// Later blocks (Annual Deposits, Cumulative, Adjusted Withdrawal Rule) are
+// policy sensitivities and are not ingested here.
 import type { WorkBook } from 'xlsx';
 import type { IngestContext, ObservationRecord, Scenario } from '../lib/types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from '../lib/cells';
+import { cellAt, cellFormat, isBlankRow, sheetBounds } from '../lib/cells';
 import { slugify } from '../lib/dates';
 import { coerceNumber } from '../lib/numbers';
+import { isStructuralMarker, normalizeLabel } from '../lib/labels';
+import { parseScenarioHeader } from '../lib/headers';
 
 const SHEET = 'NRF';
 const SOURCE = 'MoF NRF Quarterly Reports';
@@ -17,52 +20,39 @@ const UNIT = 'US$ thousands';
 const CATEGORY = 'fiscal' as const;
 const ID_PREFIX = 'nrf';
 
+const COL_MARKER = 1;
+const COL_NAME = 2;
+const COL_DATA0 = 3;
+
 interface HeaderCol { col: number; year: number; scenario: Scenario }
 
-function findHeader(book: WorkBook): HeaderCol[] {
+function findBlock1Header(book: WorkBook): { headerRow: number; cols: HeaderCol[] } | null {
   const sheet = book.Sheets[SHEET]!;
   const b = sheetBounds(sheet);
-  if (!b) return [];
-  // Heuristic: look for a row with at least 3 year-like numeric cells. The row above/same as
-  // it typically carries scenario words. We scan rows 0-15.
-  type Row = { r: number; years: Map<number, number>; scenarios: Map<number, Scenario> };
-  const rows: Row[] = [];
-  for (let r = b.r; r <= Math.min(b.r + 20, b.R); r++) {
-    const years = new Map<number, number>();
-    const scenarios = new Map<number, Scenario>();
-    for (let c = b.c; c <= b.C; c++) {
-      const v = cellAt(sheet, r, c);
-      if (typeof v === 'number' && v >= 2000 && v <= 2050 && Number.isInteger(v)) years.set(c, v);
-      if (typeof v === 'string') {
-        const s = v.trim().toLowerCase();
-        if (s === 'actual') scenarios.set(c, 'actual');
-        else if (s === 'budget' || s === 'budgeted') scenarios.set(c, 'budget');
-        else if (s === 'revised') scenarios.set(c, 'revised');
-        else if (s === 'projected' || s === 'projection' || s === 'forecast') scenarios.set(c, 'projection');
-        // Composite "ACTUAL 2022"
-        const m = /^(actual|budget|revised|projected|projection)\s+(\d{4})$|^(\d{4})\s+(actual|budget|revised|projected|projection)$/i.exec(v);
-        if (m) {
-          const sc = (m[1] ?? m[4])!.toLowerCase();
-          const yr = Number(m[2] ?? m[3]);
-          const scenario: Scenario = sc === 'actual' ? 'actual' : sc === 'budget' ? 'budget' : sc === 'revised' ? 'revised' : 'projection';
-          years.set(c, yr);
-          scenarios.set(c, scenario);
-        }
-      }
+  if (!b) return null;
+  for (let r = b.r; r <= Math.min(b.r + 15, b.R); r++) {
+    const c2 = cellAt(sheet, r, COL_NAME);
+    if (typeof c2 !== 'string' || c2.trim().toUpperCase() !== 'ITEM') continue;
+    const cols: HeaderCol[] = [];
+    for (let c = COL_DATA0; c <= b.C; c++) {
+      const parsed = parseScenarioHeader(cellAt(sheet, r, c));
+      if (!parsed) continue;
+      if (parsed.year < 2000 || parsed.year > 2050) continue;
+      cols.push({ col: c, year: parsed.year, scenario: parsed.scenario });
     }
-    rows.push({ r, years, scenarios });
+    if (cols.length >= 3) return { headerRow: r, cols };
   }
-  // Pick the row with most year hits; then combine with scenario row (same row or row-1)
-  const yearRow = rows.slice().sort((a, b) => b.years.size - a.years.size)[0];
-  if (!yearRow || yearRow.years.size < 2) return [];
-  const scenarioCandidates = rows.filter((r) => r.r <= yearRow.r && r.scenarios.size > 0).sort((a, b) => b.scenarios.size - a.scenarios.size);
-  const scenarioRow = scenarioCandidates[0] ?? { r: yearRow.r, years: new Map(), scenarios: new Map() };
-  const headerCols: HeaderCol[] = [];
-  for (const [col, year] of yearRow.years) {
-    const scenario = scenarioRow.scenarios.get(col) ?? yearRow.scenarios.get(col) ?? 'actual';
-    headerCols.push({ col, year, scenario });
-  }
-  return headerCols.sort((a, b) => a.col - b.col);
+  return null;
+}
+
+// Strip redundant "NRF " prefix (avoids ids like nrf_nrf_opening_balance) and
+// rewrite the capitalized section totals so users can query them by intent.
+function canonicalName(raw: string): string {
+  const name = normalizeLabel(raw).replace(/^NRF\s+/i, '');
+  const upper = name.trim().toUpperCase();
+  if (upper === 'INFLOWS') return 'Total Inflows';
+  if (upper === 'OUTFLOWS') return 'Total Outflows';
+  return name;
 }
 
 export function runNRF(book: WorkBook, ctx: IngestContext): void {
@@ -70,34 +60,44 @@ export function runNRF(book: WorkBook, ctx: IngestContext): void {
   if (!sheet) return;
   const b = sheetBounds(sheet);
   if (!b) return;
-  const header = findHeader(book);
-  if (!header.length) {
-    ctx.pushIssue({ sheet: SHEET, reason: 'Could not locate scenario/year header in NRF sheet.', severity: 'error' });
+  const header = findBlock1Header(book);
+  if (!header) {
+    ctx.pushIssue({ sheet: SHEET, reason: 'Could not locate Block 1 scenario/year header (expected "ITEM" in col C).', severity: 'error' });
     return;
   }
-  const headerMinRow = Math.max(...header.map(() => 0)); // placeholder; we walk all rows below first header col
-  const headerRowIndex = 0; // used only to start data scan
   const caveat = ctx.caveats.get(SHEET) ?? 'Royalties recorded on cash basis; recent figures may be provisional pending audit.';
 
-  // Data rows: every row with a label in col B that's not a subheader/unit row.
-  for (let r = b.r; r <= b.R; r++) {
+  // Block 1 ends when col B carries a multi-word block title (e.g. "Annual
+  // Deposits and Withdrawals"); single-letter / lone-integer markers don't.
+  let currentSection: string | null = null;
+  const BALANCE_NAMES = /^(Opening Balance|Closing Balance|Balance \(excl\. interest\))$/i;
+  const MEMO_NAMES = /^(Withdrawal Ceiling)$/i;
+
+  for (let r = header.headerRow + 1; r <= b.R; r++) {
+    const marker = cellAt(sheet, r, COL_MARKER);
+    if (typeof marker === 'string') {
+      const m = marker.trim();
+      if (m.length >= 3 && !isStructuralMarker(m)) break;
+      if (/^[A-Z]$/.test(m)) currentSection = m;
+    }
+
     if (isBlankRow(sheet, r, b.c, b.C)) continue;
-    const labelRaw = cellAt(sheet, r, 1);
-    if (isNavCell(cellAt(sheet, r, 0))) continue;
-    if (typeof labelRaw !== 'string') continue;
-    const label = labelRaw.trim();
-    if (!label) continue;
-    // Skip unit declarations and section titles
-    if (/^US\$|^G\$|^\$US/.test(label)) continue;
-    if (/^MEDIUM[- ]TERM|^ACTUAL|^PROJECTED|^BUDGET/i.test(label)) continue;
-    // Skip rows where the label cell equals a scenario word (those ARE header rows)
-    if (/^(actual|budget|revised|projected|projection)$/i.test(label)) continue;
-    const indicatorId = `${ID_PREFIX}_${slugify(label)}`;
+
+    const nameRaw = cellAt(sheet, r, COL_NAME);
+    if (typeof nameRaw !== 'string') continue;
+    const trimmed = nameRaw.trim();
+    if (!trimmed) continue;
+    if (isStructuralMarker(trimmed)) continue;
+    if (/^(medium[- ]term|actual and projected)/i.test(trimmed)) continue;
+
+    const name = canonicalName(trimmed);
+    const indicatorId = `${ID_PREFIX}_${slugify(name)}`;
+
     let wrote = false;
-    for (const hc of header) {
+    for (const hc of header.cols) {
       const raw = cellAt(sheet, r, hc.col);
       if (raw === null || raw === undefined || raw === '') continue;
-      const value = coerceNumber(raw, { sheet: SHEET, r, c: hc.col }, ctx);
+      const value = coerceNumber(raw, { sheet: SHEET, r, c: hc.col }, ctx, { format: cellFormat(sheet, r, hc.col) });
       if (value === null) continue;
       const obs: ObservationRecord = {
         indicatorId,
@@ -110,14 +110,17 @@ export function runNRF(book: WorkBook, ctx: IngestContext): void {
       wrote = true;
     }
     if (wrote) {
+      const subcategory = BALANCE_NAMES.test(name) ? 'Natural Resource Fund — Balance'
+        : MEMO_NAMES.test(name) ? 'Natural Resource Fund — Memorandum'
+        : currentSection === 'A' ? 'Natural Resource Fund — Inflows'
+        : currentSection === 'B' ? 'Natural Resource Fund — Outflows'
+        : 'Natural Resource Fund';
       ctx.indicators.set(indicatorId, {
-        id: indicatorId, name: label, category: CATEGORY,
-        subcategory: 'Natural Resource Fund',
+        id: indicatorId, name, category: CATEGORY,
+        subcategory,
         unit: UNIT, frequency: 'annual',
         source: SOURCE, sourceTab: SHEET, caveat,
       });
     }
   }
-  // Silence unused var lints (headerMinRow / headerRowIndex are kept for future row-bound guards).
-  void headerMinRow; void headerRowIndex;
 }

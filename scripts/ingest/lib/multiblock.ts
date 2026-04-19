@@ -4,9 +4,10 @@
 // category/unit via a sheet-level fallback config.
 import type { WorkBook, WorkSheet } from 'xlsx';
 import type { Category, Frequency, IngestContext } from './types';
-import { cellAt, isBlankRow, isNavCell, sheetBounds } from './cells';
+import { cellAt, cellFormat, isBlankRow, isNavCell, sheetBounds } from './cells';
 import { coerceHeaderToPeriod, slugify } from './dates';
 import { coerceNumber } from './numbers';
+import { isStructuralMarker } from './labels';
 
 export interface MultiBlockConfig {
   sheet: string;
@@ -68,12 +69,13 @@ export function runMultiBlock(book: WorkBook, cfg: MultiBlockConfig, ctx: Ingest
       if (typeof labelRaw !== 'string' || !labelRaw.trim()) continue;
       const label = labelRaw.trim();
       if (/^G\$|^US\$|^\$US|^Table\s|^MEDIUM[- ]TERM/i.test(label)) continue;
+      if (isStructuralMarker(label)) continue;
       const indicatorId = `${cfg.idPrefix}_${slugify(label)}`;
       let wrote = false;
       for (const yc of yearCols) {
         const raw = cellAt(sheet, r, yc.col);
         if (raw === null || raw === undefined || raw === '') continue;
-        const value = coerceNumber(raw, { sheet: cfg.sheet, r, c: yc.col }, ctx);
+        const value = coerceNumber(raw, { sheet: cfg.sheet, r, c: yc.col }, ctx, { format: cellFormat(sheet, r, yc.col) });
         if (value === null) continue;
         ctx.observations.push({
           indicatorId,
