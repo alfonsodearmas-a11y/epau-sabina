@@ -128,6 +128,14 @@ function isExcluded(kind: AuditTokenKind, value: number, raw: string, text: stri
     if (/^-(month|year|day|week|hour|quarter|word)s?\b/.test(tail)) return true;
   }
 
+  // Per-capita denominator labels: "per 10,000 population", "per 100 people".
+  // The digit is a rate denominator, not a data claim.
+  if (kind === 'raw' && isInteger) {
+    const tail = text.slice(end, end + 24).toLowerCase();
+    const head = text.slice(Math.max(0, start - 6), start).toLowerCase();
+    if (/^\s+(population|people|inhabitants|households|live\s+births)\b/.test(tail) && /per\s*$/.test(head)) return true;
+  }
+
   // Inside a list marker like "**1.** Services" — preceded by "**" then the
   // raw integer. Rarely worth auditing.
   if (kind === 'raw' && isInteger && /^\*+$/.test(text.slice(Math.max(0, start - 2), start))) return true;

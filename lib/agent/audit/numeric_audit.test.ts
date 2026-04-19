@@ -122,6 +122,12 @@ describe('runNumericAudit', () => {
     expect(r.pass).toBe(true);
   });
 
+  it('excludes per-capita denominator labels like "per 10,000 population"', () => {
+    const allowed = collectAllowedValues([{ tool: 'get_observations', output: { series: [{ observations: [{ value: 5.1 }] }] } }]);
+    const r = runNumericAudit('Physicians per 10,000 population stood at 5.1.', allowed);
+    expect(r.pass).toBe(true);
+  });
+
   it('excludes compound period labels like "12-month" and "10-year"', () => {
     const allowed = collectAllowedValues([{ tool: 'get_observations', output: { series: [{ observations: [{ value: 1.977 }] }] } }]);
     const r = runNumericAudit('The 12-month inflation rate in 2023 was 1.98 percent.', allowed);
