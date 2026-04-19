@@ -76,7 +76,12 @@ export const AGENT_TOOLS = [
     description:
       'Deterministic server-side arithmetic. Ops: yoy_growth, cagr, indexed, correlation (single only); ' +
       'ratio, share, difference (single or batched — pass an array on the varying side to compute many at once). ' +
-      'Never do math in your head; even a single growth rate goes through this tool.',
+      'Never do math in your head; even a single growth rate goes through this tool. ' +
+      'The varying-side argument (`part` for share, `numerator` for ratio, `a` for difference) must be a JSON array, ' +
+      'either [{periodDate, value}, ...] or [{id, series: [{periodDate, value}, ...]}, ...]. ' +
+      'Never pass a stringified JSON array. ' +
+      'When you need the same operation (for example share of total) for many components against one shared denominator, ' +
+      'send one batched call with all components in the array, not one call per component.',
     input_schema: {
       type: 'object',
       required: ['operation'],
@@ -284,6 +289,10 @@ export const AGENT_TOOLS = [
               requested: { type: 'string' },
               closest_available: {
                 type: 'array',
+                description:
+                  'Either empty (no nearby series), or a list of specific alternatives; ' +
+                  'each entry must name an indicator_id or a comparison_table_id. ' +
+                  'Do not add a why-only entry when no alternative exists.',
                 items: {
                   type: 'object',
                   required: ['why'],
