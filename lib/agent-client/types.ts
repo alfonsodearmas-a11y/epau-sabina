@@ -64,7 +64,10 @@ export function assistantSegments(events: AgentEvent[]): AssistantSegment[] {
     else if (e.type === 'render') {
       flush();
       out.push({ kind: 'render', event: e });
-    } else if (e.type === 'audit' && e.result === 'failed') {
+    } else if (e.type === 'audit' && e.result === 'failed' && e.will_retry) {
+      // Retry is about to run; clear the pre-retry timeline so the user only
+      // sees the retry output. On a terminal audit failure (no retry), keep
+      // the content and let the UI render a warning badge.
       buf = '';
       out = [];
     }

@@ -121,7 +121,7 @@ export async function POST(req: Request) {
           kind: 'numeric_audit_failed',
           detail: { unground: auditResult.unground.slice(0, 20), attempt: 1 },
         });
-        emit({ type: 'audit', result: 'failed', unground: auditResult.unground });
+        emit({ type: 'audit', result: 'failed', unground: auditResult.unground, will_retry: true });
         emit({ type: 'status', message: 'Re-running with audit feedback…' });
 
         const feedback = formatAuditFeedback(auditResult.unground);
@@ -141,15 +141,16 @@ export async function POST(req: Request) {
           type: 'audit',
           result: finalAudit,
           unground: retryAudit.unground,
+          will_retry: false,
         });
       } else if (!auditResult.pass && auditMode !== 'strict') {
         recorder.systemEvent({
           kind: 'numeric_audit_failed_permissive',
           detail: { unground: auditResult.unground.slice(0, 20) },
         });
-        emit({ type: 'audit', result: 'failed', unground: auditResult.unground });
+        emit({ type: 'audit', result: 'failed', unground: auditResult.unground, will_retry: false });
       } else {
-        emit({ type: 'audit', result: 'pass', unground: [] });
+        emit({ type: 'audit', result: 'pass', unground: [], will_retry: false });
       }
 
       emit({ type: 'turn_end', stop_reason: result.stopReason, steps: result.steps });

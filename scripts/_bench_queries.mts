@@ -73,7 +73,7 @@ async function runOne(q: Query) {
   for (const e of events) {
     if (e.type === 'text_delta') textBuf += String(e.text ?? '');
     else if (e.type === 'render') userVisibleRenders.push(e);
-    else if (e.type === 'audit' && e.result === 'failed') {
+    else if (e.type === 'audit' && (e as { result?: string }).result === 'failed' && (e as { will_retry?: boolean }).will_retry) {
       textBuf = '';
       userVisibleRenders.length = 0;
     }

@@ -5,7 +5,7 @@ export type AgentEvent =
   | { type: 'tool_result'; tool_call_id: string; output: unknown; error?: string }
   | { type: 'render'; render_id: string; kind: 'chart' | 'table' | 'commentary' | 'flag_unavailable'; payload: unknown }
   | { type: 'text_delta'; text: string }
-  | { type: 'audit'; result: 'pass' | 'retried_pass' | 'failed'; unground: Array<{ raw: string; value: number; context: string; kind: string }> }
+  | { type: 'audit'; result: 'pass' | 'retried_pass' | 'failed'; unground: Array<{ raw: string; value: number; context: string; kind: string }>; will_retry?: boolean }
   | { type: 'turn_end'; stop_reason: string; steps: number }
   | { type: 'error'; code: string; detail: string };
 

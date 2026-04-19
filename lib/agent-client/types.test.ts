@@ -22,16 +22,27 @@ describe('assistantSegments', () => {
     expect(segs[2]).toEqual({ kind: 'text', text: 'After.' });
   });
 
-  it('resets the full timeline on an audit failed event (text and renders both)', () => {
+  it('resets the timeline on audit failed with will_retry=true', () => {
     const segs = assistantSegments([
       { type: 'text_delta', text: 'Bad first attempt text.' },
       { type: 'render', render_id: 'r1', kind: 'chart', payload: {} },
-      { type: 'audit', result: 'failed', unground: [] },
+      { type: 'audit', result: 'failed', unground: [], will_retry: true },
       { type: 'text_delta', text: 'Clean retry text.' },
       { type: 'render', render_id: 'r2', kind: 'chart', payload: {} },
     ]);
     expect(segs).toHaveLength(2);
     expect(segs[0]).toEqual({ kind: 'text', text: 'Clean retry text.' });
+    expect(segs[1]!.kind).toBe('render');
+  });
+
+  it('keeps content on terminal audit failed (will_retry=false)', () => {
+    const segs = assistantSegments([
+      { type: 'text_delta', text: 'Final attempt text.' },
+      { type: 'render', render_id: 'r1', kind: 'commentary', payload: {} },
+      { type: 'audit', result: 'failed', unground: [{ raw: '5 percent', value: 5, context: 'ctx', kind: 'percent' }], will_retry: false },
+    ]);
+    expect(segs).toHaveLength(2);
+    expect(segs[0]).toEqual({ kind: 'text', text: 'Final attempt text.' });
     expect(segs[1]!.kind).toBe('render');
   });
 
