@@ -1,35 +1,43 @@
-// Middleware: enforce the email allowlist before any page or API route runs.
-// In v1 we trust a simple `x-epau-user` header (set by a reverse proxy, a
-// browser extension, or the local dev server for Sabina's machine). Requests
-// without a recognised email are redirected to /denied.
+// Middleware: HTTP Basic Auth gate in production, local-dev bypass via
+// EPAU_ALLOW_LOCAL. Credentials are hardcoded for the v1 experimental deploy;
+// swap for SSO (Vercel Access, Cloudflare Access, Supabase session) before
+// wider rollout.
 import { NextResponse, type NextRequest } from 'next/server';
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|denied|api/health).*)'],
 };
 
+const BASIC_USER = 'sabina_epau';
+const BASIC_PASS = '199001';
+const SESSION_EMAIL = 'sabina@mpua.gov.gy';
+
+function unauthorized() {
+  return new NextResponse('Authentication required', {
+    status: 401,
+    headers: { 'WWW-Authenticate': 'Basic realm="EPAU Analyst Workbench"' },
+  });
+}
+
 export function middleware(req: NextRequest) {
-  // Local dev carve-out: if EPAU_ALLOW_LOCAL is set, let unauthenticated calls through.
   if (process.env.EPAU_ALLOW_LOCAL === 'true') return NextResponse.next();
 
-  const headerEmail = req.headers.get('x-epau-user');
-  const cookieEmail = req.cookies.get('epau_user')?.value;
-  const email = (headerEmail ?? cookieEmail ?? '').toLowerCase();
-  if (!email) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/denied';
-    return NextResponse.redirect(url);
+  const auth = req.headers.get('authorization') ?? '';
+  if (!auth.toLowerCase().startsWith('basic ')) return unauthorized();
+
+  let decoded = '';
+  try {
+    decoded = atob(auth.slice(6).trim());
+  } catch {
+    return unauthorized();
   }
-  const allowlist = (process.env.EPAU_EMAIL_ALLOWLIST ?? '')
-    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const superadmin = (process.env.EPAU_SUPERADMIN_EMAIL ?? '').trim().toLowerCase();
-  if (superadmin) allowlist.push(superadmin);
-  if (!allowlist.includes(email)) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/denied';
-    return NextResponse.redirect(url);
-  }
+  const sep = decoded.indexOf(':');
+  if (sep < 0) return unauthorized();
+  const user = decoded.slice(0, sep);
+  const pass = decoded.slice(sep + 1);
+  if (user !== BASIC_USER || pass !== BASIC_PASS) return unauthorized();
+
   const res = NextResponse.next();
-  res.headers.set('x-epau-user-resolved', email);
+  res.headers.set('x-epau-user-resolved', SESSION_EMAIL);
   return res;
 }
