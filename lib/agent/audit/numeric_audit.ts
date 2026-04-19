@@ -120,6 +120,10 @@ function isExcluded(kind: AuditTokenKind, value: number, raw: string, text: stri
   // Single-digit enumeration integers ("three shifts", "1.", "2.").
   if (kind === 'raw' && isInteger && Math.abs(value) < 10) return true;
 
+  // Small integer percents usually echo the user's phrasing ("top 1%",
+  // "the first 5 percent") rather than data. Not worth a turn-level retry.
+  if (kind === 'percent' && isInteger && Math.abs(value) < 10) return true;
+
   // Measurement-period labels: "12-month rate", "10-year bond", "24-hour",
   // and UX targets: "200-word target".
   // If the integer is immediately followed by "-month" / "-year" / "-day" /

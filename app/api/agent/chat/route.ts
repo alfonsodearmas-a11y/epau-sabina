@@ -181,7 +181,12 @@ async function loadHistory(_sessionId: string): Promise<Anthropic.Messages.Messa
 
 function runAudit(result: RunAgentLoopResult) {
   const visibleText = [result.finalText, ...result.renderedCommentaryTexts].join('\n');
-  const allowed = collectAllowedValues(result.toolCalls);
+  const calledFlag = result.toolCalls.some((t) => t.tool === 'flag_unavailable');
+  // On a flag_unavailable turn, the prose must carry no data numbers at all
+  // (year integers and enumeration figures are exempt by the audit's own
+  // exclusion logic). Pass an empty allowed set so even grounded figures
+  // from substitute indicators fail the audit and trigger the retry.
+  const allowed = calledFlag ? [] : collectAllowedValues(result.toolCalls);
   return runNumericAudit(visibleText, allowed);
 }
 

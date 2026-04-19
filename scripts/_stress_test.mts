@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { runNumericAudit } from '../lib/agent/audit/numeric_audit';
 
 const BASE = process.env.EPAU_URL ?? 'http://localhost:3000';
 const OUT = process.env.STRESS_OUT ?? '/tmp/epau-stress';
@@ -94,8 +95,11 @@ async function runOne(q: Query) {
   // Collect any flag_unavailable input details
   const flagInputs = flagCalls.map((e) => (e as { input?: unknown }).input);
 
-  // Year-and-ordinal aware number extractor
-  const numbersInFinal = extractDisallowedNumbers(finalText);
+  // Use the audit's own tokenization with an empty allowed set so that
+  // exclusions (year integers, single-digit enumeration, compound labels
+  // like "10,000 population" / "12-month" / "200-word", small-percent
+  // ordinals like "top 1%") are consistent with runtime auditing.
+  const numbersInFinal = runNumericAudit(finalText, []).unground.map((u) => ({ raw: u.raw, value: u.value }));
 
   // Named-source scan (case insensitive) over the user-visible text AND any
   // structured tool inputs for flag_unavailable.
@@ -141,31 +145,6 @@ async function runOne(q: Query) {
 
   const fuNote = flagCalls.length === 1 ? 'yes' : `${flagCalls.length}`;
   console.log(`  audit=${bundle.finalAudit}  flag_unavailable=${fuNote}  fabricated_nums=${numbersInFinal.length}  named=${namedInProse.length + namedInFlagInput.length}`);
-}
-
-function extractDisallowedNumbers(text: string): Array<{ raw: string; value: number }> {
-  // Catch any digit-bearing token except:
-  // - year integers 1900-2099
-  // - list markers "1." "2." at the start of lines
-  // - compound labels like "1980s"
-  const out: Array<{ raw: string; value: number }> = [];
-  const re = /(\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/g;
-  for (const m of text.matchAll(re)) {
-    const raw = m[0]!;
-    const value = Number(raw.replace(/,/g, ''));
-    if (!Number.isFinite(value)) continue;
-    const idx = m.index ?? 0;
-    const prior = text.slice(Math.max(0, idx - 3), idx);
-    const next = text.slice(idx + raw.length, idx + raw.length + 8);
-    // Year integers
-    if (Number.isInteger(value) && value >= 1900 && value <= 2099 && !raw.includes('.') && !/^\./.test(next)) continue;
-    // List marker at line start: "1." or "1) "
-    if (/^\s*$/.test(prior) && /^[.)] /.test(next)) continue;
-    // Decade like "2010s"
-    if (/^s\b/.test(next) && Number.isInteger(value) && value >= 1900 && value <= 2099) continue;
-    out.push({ raw, value });
-  }
-  return out;
 }
 
 async function main() {
