@@ -20,6 +20,7 @@ type ChatBody = {
   message: string;
   surface: Surface;
   surface_context?: Record<string, unknown>;
+  start_new_session?: boolean;
 };
 
 function userFrom(req: Request): string {
@@ -47,7 +48,9 @@ export async function POST(req: Request) {
   if (!surface) return jsonError(400, 'invalid_surface', `surface must be one of ${VALID_SURFACES.join(', ')}`);
 
   const userEmail = userFrom(req);
-  const cookieSession = body.session_id ?? sessionCookieFrom(req);
+  const cookieSession = body.start_new_session
+    ? undefined
+    : body.session_id ?? sessionCookieFrom(req);
 
   const resolution = await resolveSession(prisma, cookieSession, userEmail, surface);
   const session = resolution.session;
