@@ -5,6 +5,19 @@ import type { SVGProps } from 'react';
 
 export type IconProps = SVGProps<SVGSVGElement>;
 
+export const MenuIcon = (p: IconProps) => (
+  <svg
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    {...p}
+  >
+    <path d="M2 4h12M2 8h12M2 12h12" />
+  </svg>
+);
+
 export const SearchIcon = (p: IconProps) => (
   <svg
     viewBox="0 0 20 20"

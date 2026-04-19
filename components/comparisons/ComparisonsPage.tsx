@@ -46,9 +46,6 @@ export function ComparisonsPage() {
         </div>
       </div>
 
-      {/* Mobile: the table picker collapses into a native select so the entire
-          list isn't stacked above the selected table. Desktop keeps the
-          scannable left rail. */}
       <div className="lg:hidden mb-3 glass rounded-lg p-1.5 flex items-center gap-2">
         <ColumnsIcon className="w-4 h-4 text-text-tertiary ml-2 shrink-0" />
         <select
@@ -56,7 +53,7 @@ export function ComparisonsPage() {
           onChange={(e) => setSelected(e.target.value)}
           className="flex-1 h-11 bg-transparent text-text-primary text-[14px] px-1"
         >
-          {tables.map((t) => {
+          {list.map((t) => {
             const cols = t.groups.reduce((n, g) => n + g.span, 0);
             return (
               <option key={t.id} value={t.id} className="bg-ink-950 text-text-primary">

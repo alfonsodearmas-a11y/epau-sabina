@@ -47,11 +47,11 @@ export function QueryBar({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') onRun(); }}
           placeholder={`Try: ${placeholder}`}
-          className="flex-1 min-w-0 bg-transparent text-[15px] md:text-[15px] text-text-primary placeholder:text-text-tertiary py-2.5 px-1 font-normal"
+          className="flex-1 min-w-0 bg-transparent text-[15px] text-text-primary placeholder:text-text-tertiary py-2.5 px-1 font-normal"
           disabled={disabled}
         />
       </div>
-      <div className="flex items-center gap-1.5 md:gap-1.5">
+      <div className="flex items-center gap-1.5">
         <button
           onClick={onToggleManual}
           className={`h-11 md:h-9 px-3 rounded-md text-[13px] md:text-[12px] flex items-center gap-1.5 border transition-colors ${

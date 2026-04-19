@@ -33,9 +33,6 @@ export function IndicatorTable({
         <KeyCap>/</KeyCap>
       </div>
       <div className="bg-white/[0.01] border border-white/6 border-t-0 rounded-b-lg overflow-hidden">
-        {/* Mobile: card-style rows, no horizontal scroll, touch-friendly.
-            Desktop (md+): original dense 6-column grid with horizontal scroll
-            if it ever exceeds the container. */}
         <div className="hidden md:block">
           <div className="overflow-x-auto scroll-thin">
             <div className="min-w-[720px]">

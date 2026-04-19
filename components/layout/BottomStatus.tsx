@@ -20,7 +20,7 @@ export function BottomStatus() {
   const label = LABELS[key] ?? 'Workbench';
 
   return (
-    <div className="hidden md:block fixed bottom-0 left-0 right-0 h-6 bg-ink-950/85 backdrop-blur border-t border-white/5 z-20 safe-bottom safe-x">
+    <div className="hidden md:block fixed bottom-0 left-0 right-0 h-6 bg-ink-950/85 backdrop-blur border-t border-white/5 z-20">
       <div className="max-w-[1500px] mx-auto h-full px-8 flex items-center justify-between text-[10.5px] text-text-tertiary font-mono">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">

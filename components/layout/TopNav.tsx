@@ -15,6 +15,7 @@ import {
   ColumnsIcon,
   TerminalIcon,
   CloseIcon,
+  MenuIcon,
 } from '@/components/icons';
 import type { IconProps } from '@/components/icons';
 import { KeyCap } from '@/components/ui/KeyCap';
@@ -32,14 +33,6 @@ const NAV: NavItem[] = [
   { href: '/comparisons', label: 'Comparisons', Icon: ColumnsIcon },
   { href: '/admin', label: 'Admin', Icon: TerminalIcon },
 ];
-
-function HamburgerIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M2 4h12M2 8h12M2 12h12" />
-    </svg>
-  );
-}
 
 function Logo() {
   return (
@@ -117,7 +110,7 @@ export function TopNav({ onOpenPalette }: TopNavProps) {
           aria-expanded={drawerOpen}
           className="lg:hidden ml-auto w-11 h-11 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary flex items-center justify-center"
         >
-          <HamburgerIcon className="w-5 h-5" />
+          <MenuIcon className="w-5 h-5" />
         </button>
       </div>
 
