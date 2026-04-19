@@ -70,7 +70,7 @@ export function FlagIssueButton({ indicatorIds, defaultDateStart, defaultDateEnd
   const sent = state.kind === 'sent';
 
   return (
-    <div className="glass rounded-lg p-3 w-[360px] border border-white/10">
+    <div className="glass rounded-lg p-3 w-full md:w-[360px] border border-white/10">
       <div className="text-[12px] text-text-secondary mb-2">
         Flagging {indicatorIds.length} indicator{indicatorIds.length === 1 ? '' : 's'}.
       </div>

@@ -47,7 +47,7 @@ export function ManualPicker({ selected, onToggle, onRun }: ManualPickerProps) {
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto scroll-thin pr-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 max-h-64 lg:max-h-48 overflow-y-auto scroll-thin pr-1">
         {filtered.map((ind) => {
           const on = selected.includes(ind.id);
           const sourcePrefix = ind.source.split(',')[0] ?? ind.source;
@@ -65,7 +65,7 @@ export function ManualPicker({ selected, onToggle, onRun }: ManualPickerProps) {
           );
         })}
         {filtered.length === 0 ? (
-          <div className="col-span-4 text-center text-text-tertiary text-[12px] py-6">No indicators match.</div>
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4 text-center text-text-tertiary text-[12px] py-6">No indicators match.</div>
         ) : null}
       </div>
     </div>

@@ -37,41 +37,43 @@ export function QueryBar({
   const placeholder = EXAMPLE_QUERIES[ph] ?? EXAMPLE_QUERIES[0] ?? '';
 
   return (
-    <div className="glass-strong rounded-lg p-1.5 flex items-center gap-1.5 gold-ring">
-      <div className="pl-3 pr-1 text-gold-300">
-        <SparkleIcon className="w-4 h-4" />
+    <div className="glass-strong rounded-lg p-1.5 gold-ring flex flex-col md:flex-row md:items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <div className="pl-3 pr-1 text-gold-300 shrink-0">
+          <SparkleIcon className="w-4 h-4" />
+        </div>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') onRun(); }}
+          placeholder={`Try: ${placeholder}`}
+          className="flex-1 min-w-0 bg-transparent text-[15px] md:text-[15px] text-text-primary placeholder:text-text-tertiary py-2.5 px-1 font-normal"
+          disabled={disabled}
+        />
       </div>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') onRun();
-        }}
-        placeholder={`Try: ${placeholder}`}
-        className="flex-1 bg-transparent text-[15px] text-text-primary placeholder:text-text-tertiary py-2.5 px-1 font-normal"
-        disabled={disabled}
-      />
-      <button
-        onClick={onToggleManual}
-        className={`h-9 px-3 rounded-md text-[12px] flex items-center gap-1.5 border transition-colors ${
-          manualMode
-            ? 'bg-white/[0.06] border-white/15 text-text-primary'
-            : 'bg-transparent border-white/10 text-text-tertiary hover:text-text-secondary hover:border-white/20'
-        }`}
-        title="Toggle manual picker"
-      >
-        <SlidersIcon className="w-3.5 h-3.5" />
-        Manual
-      </button>
-      <div className="w-px h-6 bg-white/10 mx-1" />
-      <button
-        onClick={onRun}
-        disabled={disabled}
-        className="h-9 px-4 rounded-md bg-gold-300 hover:bg-gold-200 text-ink-950 text-[12.5px] font-semibold tracking-wide flex items-center gap-1.5 transition-colors disabled:opacity-50"
-      >
-        Run
-        <KeyCap className="!bg-black/20 !border-black/20 !text-ink-950">↵</KeyCap>
-      </button>
+      <div className="flex items-center gap-1.5 md:gap-1.5">
+        <button
+          onClick={onToggleManual}
+          className={`h-11 md:h-9 px-3 rounded-md text-[13px] md:text-[12px] flex items-center gap-1.5 border transition-colors ${
+            manualMode
+              ? 'bg-white/[0.06] border-white/15 text-text-primary'
+              : 'bg-transparent border-white/10 text-text-tertiary hover:text-text-secondary hover:border-white/20'
+          }`}
+          title="Toggle manual picker"
+        >
+          <SlidersIcon className="w-3.5 h-3.5" />
+          Manual
+        </button>
+        <div className="hidden md:block w-px h-6 bg-white/10 mx-1" />
+        <button
+          onClick={onRun}
+          disabled={disabled}
+          className="flex-1 md:flex-none h-11 md:h-9 px-4 rounded-md bg-gold-300 hover:bg-gold-200 text-ink-950 text-[13.5px] md:text-[12.5px] font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+        >
+          Run
+          <KeyCap className="!bg-black/20 !border-black/20 !text-ink-950">↵</KeyCap>
+        </button>
+      </div>
     </div>
   );
 }

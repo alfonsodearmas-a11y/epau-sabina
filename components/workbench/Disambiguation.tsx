@@ -38,7 +38,7 @@ export function Disambiguation({ candidates, message, onPick }: DisambiguationPr
           No candidate indicators came back; rephrase and try again.
         </div>
       ) : (
-        <div className={`grid ${candidates.length >= 3 ? 'grid-cols-3' : `grid-cols-${candidates.length}`} gap-2 mt-2`}>
+        <div className={`grid grid-cols-1 gap-2 mt-2 ${candidates.length >= 3 ? 'md:grid-cols-3' : candidates.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
           {candidates.map((c) => (
             <button key={c.id} onClick={() => onPick(c.id)}
               className="text-left p-3 rounded-md bg-white/[0.02] border border-white/8 hover:border-gold-300/40 hover:bg-gold-300/5 transition-colors">

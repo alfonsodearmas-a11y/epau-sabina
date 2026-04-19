@@ -94,17 +94,17 @@ export function Workbench({ initialState = 'empty', initialQuery = '' }: Workben
   const manualRun = () => { if (selected.length) void doRun(query || 'manual selection', selected); };
 
   return (
-    <div className="px-8 pt-6 pb-16 max-w-[1400px] mx-auto">
-      <div className="flex items-start justify-between mb-5">
+    <div className="px-4 md:px-8 pt-6 pb-16 md:pb-24 max-w-[1400px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2 mb-5">
         <div>
           <div className="text-[11.5px] uppercase tracking-[0.18em] text-text-tertiary">
             Query Workbench
           </div>
-          <h1 className="font-serif text-[34px] leading-[1.1] text-text-primary mt-1">
+          <h1 className="font-serif text-[28px] md:text-[34px] leading-[1.1] text-text-primary mt-1">
             Ask the workbook a question.
           </h1>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-text-tertiary pt-2">
+        <div className="flex items-center gap-2 text-[11px] text-text-tertiary">
           <DotIcon className="w-2 h-2 text-[#7FC29B]" />
           <span>
             <span className="num">{summary.indicatorCount} indicators</span> · {summary.observationCount}
@@ -136,9 +136,9 @@ export function Workbench({ initialState = 'empty', initialQuery = '' }: Workben
       ) : null}
       {state === 'running' ? <RunningState /> : null}
       {state === 'error' ? (
-        <div className="glass rounded-lg p-5 mt-3 border-l-2 border-l-[#E06C6C]/40 flex items-center justify-between">
+        <div className="glass rounded-lg p-5 mt-3 border-l-2 border-l-[#E06C6C]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-[13px] text-text-secondary">{errorMsg ?? 'Query failed.'}</div>
-          <button onClick={run} className="h-8 px-3 rounded bg-white/[0.04] border border-white/10 text-text-secondary hover:text-text-primary text-[12px]">Retry</button>
+          <button onClick={run} className="h-11 md:h-8 px-4 md:px-3 rounded bg-white/[0.04] border border-white/10 text-text-secondary hover:text-text-primary text-[13px] md:text-[12px] self-start">Retry</button>
         </div>
       ) : null}
       {state === 'results' && spec ? (

@@ -53,31 +53,31 @@ export function DynamicResultsPanel({
 
   return (
     <div className="mt-3 fade-up">
-      <div className="flex items-end justify-between mb-3">
-        <div>
-          <h2 className="font-serif text-[26px] leading-[1.15] text-text-primary">{spec.title}</h2>
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <h2 className="font-serif text-[22px] md:text-[26px] leading-[1.15] text-text-primary">{spec.title}</h2>
           <div className="text-[12.5px] text-text-tertiary mt-0.5">{spec.subtitle}</div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-white/[0.03] border border-white/8">
+        <div className="flex items-center gap-1.5 overflow-x-auto scroll-thin -mx-1 px-1">
+          <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-white/[0.03] border border-white/8 shrink-0">
             {CHART_SWITCHER.map((t) => {
               const ActiveIcon = t.id === 'table' ? TableIcon : ChartIcon;
               const on = mode === t.id;
               return (
                 <button key={t.id} onClick={() => setMode(t.id)}
-                  className={`px-2.5 h-7 rounded flex items-center gap-1.5 text-[11.5px] transition-colors ${on ? 'bg-white/[0.08] text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}>
+                  className={`px-3 h-10 md:h-7 md:px-2.5 rounded flex items-center gap-1.5 text-[12.5px] md:text-[11.5px] transition-colors ${on ? 'bg-white/[0.08] text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}>
                   <ActiveIcon className="w-3.5 h-3.5" />{t.label}
                 </button>
               );
             })}
           </div>
-          <button onClick={onSaveView} className="h-7 w-7 rounded-md bg-white/[0.03] border border-white/8 text-text-tertiary hover:text-text-primary flex items-center justify-center" title="Pin to saved views">
+          <button onClick={onSaveView} className="h-10 w-10 md:h-7 md:w-7 rounded-md bg-white/[0.03] border border-white/8 text-text-tertiary hover:text-text-primary flex items-center justify-center shrink-0" title="Pin to saved views">
             <PinIcon className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_320px] gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
         <div className="glass rounded-lg p-4 flex flex-col">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -94,7 +94,7 @@ export function DynamicResultsPanel({
               </div>
             ) : null}
           </div>
-          <div className="h-[320px]">
+          <div className="h-[300px] md:h-[320px]">
             {mode === 'table' ? (
               <DynamicTable spec={spec} />
             ) : spec.data.length === 0 ? (
@@ -171,21 +171,23 @@ export function DynamicResultsPanel({
         setCommentary={setCommentary}
       />
 
-      <div className="mt-3 flex items-center justify-between glass rounded-lg px-4 py-3">
-        <div className="text-[11.5px] text-text-tertiary flex items-center gap-2">
-          <CheckIcon className="w-3.5 h-3.5 text-[#7FC29B]" />
-          Query resolved against {spec.indicators.length} indicator{spec.indicators.length === 1 ? '' : 's'}, {nonNullRows.length} observations.
-          {spec.caveats.length ? <span className="ml-2 flex items-center gap-1 text-[#E0A050]"><WarnIcon className="w-3 h-3" />{spec.caveats.length} caveat{spec.caveats.length === 1 ? '' : 's'} attached</span> : null}
+      <div className="mt-3 glass rounded-lg px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="text-[11.5px] text-text-tertiary flex items-start gap-2">
+          <CheckIcon className="w-3.5 h-3.5 text-[#7FC29B] shrink-0 mt-0.5" />
+          <span>
+            Query resolved against {spec.indicators.length} indicator{spec.indicators.length === 1 ? '' : 's'}, {nonNullRows.length} observations.
+            {spec.caveats.length ? <span className="ml-2 inline-flex items-center gap-1 text-[#E0A050]"><WarnIcon className="w-3 h-3" />{spec.caveats.length} caveat{spec.caveats.length === 1 ? '' : 's'} attached</span> : null}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <FlagIssueButton indicatorIds={spec.indicators.map((i) => i.id)} />
-          <button onClick={onExportPng} className="h-8 px-3 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary hover:border-white/20 hover:text-text-primary text-[12px] flex items-center gap-1.5 transition-colors">
+          <button onClick={onExportPng} className="h-11 md:h-8 px-3 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary hover:border-white/20 hover:text-text-primary text-[12.5px] md:text-[12px] flex items-center gap-1.5 transition-colors">
             <DownloadIcon className="w-3.5 h-3.5" /> Chart as PNG
           </button>
-          <button onClick={onExportDocx} className="h-8 px-3 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary hover:border-white/20 hover:text-text-primary text-[12px] flex items-center gap-1.5 transition-colors">
+          <button onClick={onExportDocx} className="h-11 md:h-8 px-3 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary hover:border-white/20 hover:text-text-primary text-[12.5px] md:text-[12px] flex items-center gap-1.5 transition-colors">
             <FileIcon className="w-3.5 h-3.5" /> Export as Word
           </button>
-          <button onClick={onSaveView} className="h-8 px-3 rounded-md bg-gold-300/10 border border-gold-300/30 text-gold-200 hover:bg-gold-300/20 text-[12px] flex items-center gap-1.5 transition-colors">
+          <button onClick={onSaveView} className="h-11 md:h-8 px-3 rounded-md bg-gold-300/10 border border-gold-300/30 text-gold-200 hover:bg-gold-300/20 text-[12.5px] md:text-[12px] flex items-center gap-1.5 transition-colors">
             <PinIcon className="w-3.5 h-3.5" /> Save this view
           </button>
         </div>

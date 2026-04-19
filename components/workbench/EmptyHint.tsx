@@ -26,7 +26,7 @@ export function EmptyHint({ onPick }: EmptyHintProps) {
           What do you want to brief on?
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 max-w-[780px] mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-[780px] mx-auto">
         {EXAMPLE_QUERIES.map((q) => (
           <button
             key={q}
