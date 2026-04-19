@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { getAnthropic, modelName } from '@/lib/anthropic';
+import { getAnthropic, modelName, composerModelName } from '@/lib/anthropic';
 import { buildToolRegistry } from '@/lib/agent/adapters';
 import { runAgentLoop, type RunAgentLoopResult } from '@/lib/agent/loop';
 import { collectAllowedValues, formatAuditFeedback, runNumericAudit } from '@/lib/agent/audit/numeric_audit';
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
 
       const anthropic = getAnthropic();
       const modelId = modelName();
-      const composer = makeCommentaryComposer(anthropic, modelId);
+      const composer = makeCommentaryComposer(anthropic, composerModelName());
       const toolRegistry = buildToolRegistry(prisma, userEmail, composer);
 
       const loopArgs = {

@@ -14,3 +14,7 @@ export function getAnthropic(): Anthropic {
 export function modelName(): string {
   return process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5';
 }
+
+export function composerModelName(): string {
+  return process.env.COMMENTARY_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001';
+}
