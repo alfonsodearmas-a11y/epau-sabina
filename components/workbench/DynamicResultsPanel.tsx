@@ -19,6 +19,7 @@ import { GenericChart } from './charts/GenericChart';
 import { SidePanel } from './SidePanel';
 import { CaveatsPanel } from './CaveatsPanel';
 import { CommentaryPanel } from './CommentaryPanel';
+import { FlagIssueButton } from './FlagIssueButton';
 import type { DynamicSpec } from './dynamic-spec';
 
 const CHART_SWITCHER = [
@@ -177,6 +178,7 @@ export function DynamicResultsPanel({
           {spec.caveats.length ? <span className="ml-2 flex items-center gap-1 text-[#E0A050]"><WarnIcon className="w-3 h-3" />{spec.caveats.length} caveat{spec.caveats.length === 1 ? '' : 's'} attached</span> : null}
         </div>
         <div className="flex items-center gap-2">
+          <FlagIssueButton indicatorIds={spec.indicators.map((i) => i.id)} />
           <button onClick={onExportPng} className="h-8 px-3 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary hover:border-white/20 hover:text-text-primary text-[12px] flex items-center gap-1.5 transition-colors">
             <DownloadIcon className="w-3.5 h-3.5" /> Chart as PNG
           </button>

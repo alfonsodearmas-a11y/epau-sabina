@@ -180,3 +180,18 @@ model SavedQuery {
   @@index([userEmail])
   @@map("saved_queries")
 }
+
+model BugReport {
+  id            String    @id @default(uuid())
+  userEmail     String    @map("user_email")
+  indicatorIds  String[]  @map("indicator_ids")
+  dateRangeStart String?  @map("date_range_start")
+  dateRangeEnd   String?  @map("date_range_end")
+  note          String
+  resolved      Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([userEmail])
+  @@index([resolved])
+  @@map("bug_reports")
+}
