@@ -1,7 +1,9 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic, modelName } from '@/lib/anthropic';
 import { buildToolRegistry } from '@/lib/agent/adapters';
-import { runAgentLoop } from '@/lib/agent/loop';
+import { runAgentLoop, type RunAgentLoopResult } from '@/lib/agent/loop';
+import { collectAllowedValues, formatAuditFeedback, runNumericAudit } from '@/lib/agent/audit/numeric_audit';
+import { makeCommentaryComposer } from '@/lib/agent/composer';
 import { AGENT_SYSTEM_PROMPT, getCatalogSummary } from '@/lib/agent/prompts/system';
 import { nextTurnIndex, recordTurnCompletion, resolveSession, SESSION_COOKIE, sessionCookieHeader } from '@/lib/agent/session';
 import { createEventEmitter, type AgentEvent } from '@/lib/agent/sse';
@@ -90,11 +92,14 @@ export async function POST(req: Request) {
         { type: 'text' as const, text: surfaceHeader },
       ];
 
-      const toolRegistry = buildToolRegistry(prisma, userEmail);
+      const anthropic = getAnthropic();
+      const modelId = modelName();
+      const composer = makeCommentaryComposer(anthropic, modelId);
+      const toolRegistry = buildToolRegistry(prisma, userEmail, composer);
 
-      const result = await runAgentLoop({
-        anthropic: getAnthropic(),
-        modelId: modelName(),
+      const loopArgs = {
+        anthropic,
+        modelId,
         system,
         initialMessages: messages,
         tools: AGENT_TOOLS as unknown as unknown[],
@@ -102,9 +107,53 @@ export async function POST(req: Request) {
         emit,
         recorder,
         surface,
-      });
+      };
+
+      let result: RunAgentLoopResult = await runAgentLoop(loopArgs);
+
+      const auditMode = (process.env.AGENT_AUDIT_MODE ?? 'strict').toLowerCase();
+      const auditResult = runAudit(result);
+      let finalAudit: 'pass' | 'retried_pass' | 'failed' | 'skipped' =
+        auditResult.pass ? 'pass' : 'failed';
+
+      if (!auditResult.pass && auditMode === 'strict') {
+        recorder.systemEvent({
+          kind: 'numeric_audit_failed',
+          detail: { unground: auditResult.unground.slice(0, 20), attempt: 1 },
+        });
+        emit({ type: 'audit', result: 'failed', unground: auditResult.unground });
+        emit({ type: 'status', message: 'Re-running with audit feedback…' });
+
+        const feedback = formatAuditFeedback(auditResult.unground);
+        const retryMessages: Anthropic.Messages.MessageParam[] = [
+          ...result.messages,
+          { role: 'user', content: [{ type: 'text', text: feedback }] },
+        ];
+
+        result = await runAgentLoop({ ...loopArgs, initialMessages: retryMessages });
+        const retryAudit = runAudit(result);
+        finalAudit = retryAudit.pass ? 'retried_pass' : 'failed';
+        recorder.systemEvent({
+          kind: retryAudit.pass ? 'numeric_audit_retry_passed' : 'numeric_audit_retry_failed',
+          detail: { unground: retryAudit.unground.slice(0, 20), attempt: 2 },
+        });
+        emit({
+          type: 'audit',
+          result: finalAudit,
+          unground: retryAudit.unground,
+        });
+      } else if (!auditResult.pass && auditMode !== 'strict') {
+        recorder.systemEvent({
+          kind: 'numeric_audit_failed_permissive',
+          detail: { unground: auditResult.unground.slice(0, 20) },
+        });
+        emit({ type: 'audit', result: 'failed', unground: auditResult.unground });
+      } else {
+        emit({ type: 'audit', result: 'pass', unground: [] });
+      }
 
       emit({ type: 'turn_end', stop_reason: result.stopReason, steps: result.steps });
+      recorder.systemEvent({ kind: 'turn_audit_result', detail: { result: finalAudit } });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       recorder.systemEvent({ kind: 'loop_error', detail, errorCode: 'loop_exception', errorDetail: detail });
@@ -127,6 +176,12 @@ export async function POST(req: Request) {
 // enforcement. See docs/agent_design.md §4 data grounding rule.
 async function loadHistory(_sessionId: string): Promise<Anthropic.Messages.MessageParam[]> {
   return [];
+}
+
+function runAudit(result: RunAgentLoopResult) {
+  const visibleText = [result.finalText, ...result.renderedCommentaryTexts].join('\n');
+  const allowed = collectAllowedValues(result.toolCalls);
+  return runNumericAudit(visibleText, allowed);
 }
 
 function jsonError(status: number, code: string, detail: string): Response {

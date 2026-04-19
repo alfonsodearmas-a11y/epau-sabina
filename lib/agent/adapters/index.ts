@@ -7,7 +7,7 @@ import {
 } from '../tools/comparison_tables';
 import { getObservations } from '../tools/get_observations';
 import { getSavedView, listSavedViews } from '../tools/saved_views';
-import { renderChart, renderCommentary, renderTable } from '../tools/render';
+import { renderChart, renderCommentary, renderTable, type CommentaryComposer } from '../tools/render';
 import { searchCatalog } from '../tools/search_catalog';
 import { comparisonTablesAdapter } from './comparison_tables';
 import { getObservationsAdapter } from './get_observations';
@@ -17,7 +17,11 @@ import { searchCatalogAdapter } from './search_catalog';
 export type ToolExecutor = (input: unknown) => Promise<unknown>;
 export type ToolRegistry = Record<string, ToolExecutor>;
 
-export function buildToolRegistry(prisma: PrismaClient, requesterEmail: string): ToolRegistry {
+export function buildToolRegistry(
+  prisma: PrismaClient,
+  requesterEmail: string,
+  composer: CommentaryComposer,
+): ToolRegistry {
   const searchDb = searchCatalogAdapter(prisma);
   const obsDb = getObservationsAdapter(prisma);
   const ctDb = comparisonTablesAdapter(prisma);
@@ -36,7 +40,10 @@ export function buildToolRegistry(prisma: PrismaClient, requesterEmail: string):
     },
     render_chart: async (input) => renderChart(input as Parameters<typeof renderChart>[0]),
     render_table: async (input) => renderTable(input as Parameters<typeof renderTable>[0]),
-    render_commentary: async (input) => renderCommentary(input as Parameters<typeof renderCommentary>[0]),
+    render_commentary: async (input) => renderCommentary(
+      input as Parameters<typeof renderCommentary>[0],
+      composer,
+    ),
     flag_unavailable: async (input) => flagUnavailable(input as Parameters<typeof flagUnavailable>[0]),
   };
 }

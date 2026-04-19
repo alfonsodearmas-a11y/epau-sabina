@@ -46,15 +46,24 @@ export type RunAgentLoopArgs = {
   maxTokens?: number;
 };
 
+export type CollectedToolCall = { tool: string; output: unknown };
+
 export type RunAgentLoopResult = {
   steps: number;
   stopReason: string;
+  messages: Anthropic.Messages.MessageParam[];
+  finalText: string;
+  toolCalls: CollectedToolCall[];
+  renderedCommentaryTexts: string[];
 };
 
 export async function runAgentLoop(args: RunAgentLoopArgs): Promise<RunAgentLoopResult> {
   const workingMessages: Anthropic.Messages.MessageParam[] = [...args.initialMessages];
+  const toolCalls: CollectedToolCall[] = [];
+  const renderedCommentaryTexts: string[] = [];
   let steps = 0;
   let capReached = false;
+  let lastFinalText = '';
 
   while (true) {
     const withTools = !capReached;
@@ -77,6 +86,7 @@ export async function runAgentLoop(args: RunAgentLoopArgs): Promise<RunAgentLoop
     const msg = await stream.finalMessage();
     const latencyMs = Date.now() - callStart;
     const text = textOf(msg.content as ContentBlock[]);
+    lastFinalText = text;
     const usage = msg.usage as Anthropic.Messages.Usage & { cache_read_input_tokens?: number | null };
     const cacheHit = (usage.cache_read_input_tokens ?? 0) > 0;
 
@@ -99,12 +109,29 @@ export async function runAgentLoop(args: RunAgentLoopArgs): Promise<RunAgentLoop
     );
 
     if (msg.stop_reason !== 'tool_use' || toolUses.length === 0 || capReached) {
-      return { steps, stopReason: msg.stop_reason ?? 'end_turn' };
+      return {
+        steps,
+        stopReason: msg.stop_reason ?? 'end_turn',
+        messages: workingMessages,
+        finalText: lastFinalText,
+        toolCalls,
+        renderedCommentaryTexts,
+      };
     }
 
     const toolResults = await Promise.all(
       toolUses.map((tu) => executeTool(tu, args)),
     );
+
+    for (let i = 0; i < toolUses.length; i++) {
+      const name = toolUses[i]!.name;
+      const output = toolResults[i]!.output;
+      toolCalls.push({ tool: name, output });
+      if (name === 'render_commentary' && output && typeof output === 'object' && 'text' in output) {
+        const t = (output as { text?: unknown }).text;
+        if (typeof t === 'string') renderedCommentaryTexts.push(t);
+      }
+    }
 
     steps++;
     const capHitNow = steps >= MAX_TOOL_ROUNDS;
@@ -196,11 +223,17 @@ async function executeTool(
   });
 
   if (!isError && isRenderableTool(tu.name) && output && typeof output === 'object' && 'render_id' in output) {
+    // render_commentary's server-side composer produces the prose; ship it
+    // to the client by merging the text back into the payload.
+    const input = tu.input as Record<string, unknown>;
+    const payload = tu.name === 'render_commentary'
+      ? { ...input, text: (output as { text?: string }).text ?? '' }
+      : input;
     args.emit({
       type: 'render',
       render_id: String((output as { render_id: string }).render_id),
       kind: RENDER_KIND[tu.name],
-      payload: tu.input,
+      payload,
     });
   }
 

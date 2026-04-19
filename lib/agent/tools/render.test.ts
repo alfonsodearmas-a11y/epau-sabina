@@ -129,47 +129,71 @@ describe('render_table', () => {
 
 // --------- render_commentary ---------
 describe('render_commentary', () => {
-  const goodText = Array(150).fill('Guyanese').join(' ');
+  const goodBrief = {
+    figures: [
+      { label: 'closing balance', value: 3.1, unit: 'US$ billion', period: 'end-2024', indicator_id: 'nrf_closing_balance' },
+    ],
+    analytical_point: 'The fund has grown.',
+  };
 
-  it('happy: clean prose returns word_count and no style warnings', () => {
-    const r = renderCommentary({ text: goodText });
+  const fakeComposer = (text: string) => async () => text;
+
+  it('happy: composer output is returned with word count', async () => {
+    const paragraph = Array(150).fill('word').join(' ');
+    const r = await renderCommentary({ brief: goodBrief }, fakeComposer(paragraph));
     if (isToolError(r)) throw new Error('unexpected');
+    expect(r.text).toBe(paragraph);
     expect(r.word_count).toBe(150);
     expect(r.style_warnings).toEqual([]);
   });
 
-  it('edge: emdash produces a style warning', () => {
-    const r = renderCommentary({ text: 'NRF balance grew sharply \u2014 largely due to oil inflows. ' + goodText });
+  it('edge: emdash in composer output produces a style warning', async () => {
+    const r = await renderCommentary(
+      { brief: goodBrief },
+      fakeComposer('NRF balance grew sharply \u2014 largely due to oil inflows. ' + Array(150).fill('w').join(' ')),
+    );
     if (isToolError(r)) throw new Error('unexpected');
     expect(r.style_warnings.some((w) => w.startsWith('emdash'))).toBe(true);
   });
 
-  it('edge: GY$ currency symbol flagged', () => {
-    const r = renderCommentary({ text: 'GY$178 billion was reported in 2023. ' + goodText });
+  it('edge: GY$ currency symbol flagged', async () => {
+    const r = await renderCommentary(
+      { brief: goodBrief },
+      fakeComposer('GY$178 billion was reported in 2023. ' + Array(150).fill('w').join(' ')),
+    );
     if (isToolError(r)) throw new Error('unexpected');
     expect(r.style_warnings.some((w) => w.includes('GY$'))).toBe(true);
   });
 
-  it('edge: "not X, it is Y" construction flagged', () => {
-    const r = renderCommentary({ text: 'The NRF is not a stabilization fund, it is a savings vehicle. ' + goodText });
-    if (isToolError(r)) throw new Error('unexpected');
-    expect(r.style_warnings.some((w) => w.includes('not X'))).toBe(true);
+  it('failure: brief without figures is rejected without calling composer', async () => {
+    const r = await renderCommentary(
+      { brief: { figures: [], analytical_point: 'point' } } as never,
+      async () => 'should not run',
+    );
+    expect(isToolError(r)).toBe(true);
+    if (isToolError(r)) expect(r.error).toBe('invalid_brief');
   });
 
-  it('failure: empty text', () => {
-    const r = renderCommentary({ text: '  ' });
+  it('failure: empty composer output', async () => {
+    const r = await renderCommentary({ brief: goodBrief }, fakeComposer('   '));
     expect(isToolError(r)).toBe(true);
     if (isToolError(r)) expect(r.error).toBe('commentary_empty');
   });
 
-  it('failure: over 400 words', () => {
-    const r = renderCommentary({ text: Array(401).fill('word').join(' ') });
+  it('failure: composer output over 400 words', async () => {
+    const r = await renderCommentary(
+      { brief: goodBrief },
+      fakeComposer(Array(401).fill('word').join(' ')),
+    );
     expect(isToolError(r)).toBe(true);
     if (isToolError(r)) expect(r.error).toBe('commentary_too_long');
   });
 
-  it('edge: word count below target band produces a warning', () => {
-    const r = renderCommentary({ text: 'Short paragraph about NRF performance this year.', word_count_target: 200 });
+  it('edge: word count below target band produces a warning', async () => {
+    const r = await renderCommentary(
+      { brief: goodBrief, word_count_target: 200 },
+      fakeComposer('Short paragraph.'),
+    );
     if (isToolError(r)) throw new Error('unexpected');
     expect(r.style_warnings.some((w) => w.includes('below target band'))).toBe(true);
   });

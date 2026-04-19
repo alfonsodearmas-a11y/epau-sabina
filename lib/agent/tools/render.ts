@@ -125,28 +125,66 @@ export function renderTable(input: RenderTableInput): RenderTableResult {
   return { render_id: newRenderId(), row_count: input.rows.length, warnings };
 }
 
+export type CommentaryFigure = {
+  label: string;
+  value: number;
+  unit: string;
+  period: string;
+  indicator_id: string;
+};
+
 export type RenderCommentaryInput = {
-  text: string;
+  brief: {
+    figures: CommentaryFigure[];
+    analytical_point: string;
+  };
   pullquote?: string;
   caveat?: string;
   word_count_target?: number;
 };
 
 export type RenderCommentaryResult =
-  | { render_id: string; word_count: number; style_warnings: string[] }
-  | ToolError<'commentary_empty' | 'commentary_too_long'>;
+  | {
+      render_id: string;
+      text: string;
+      word_count: number;
+      style_warnings: string[];
+    }
+  | ToolError<'commentary_empty' | 'commentary_too_long' | 'composer_failed' | 'invalid_brief'>;
 
 const MAX_COMMENTARY_WORDS = 400;
 
-export function renderCommentary(input: RenderCommentaryInput): RenderCommentaryResult {
-  const text = (input.text ?? '').trim();
+export type CommentaryComposer = (args: {
+  brief: RenderCommentaryInput['brief'];
+  word_count_target: number;
+}) => Promise<string>;
+
+export async function renderCommentary(
+  input: RenderCommentaryInput,
+  composer: CommentaryComposer,
+): Promise<RenderCommentaryResult> {
+  const brief = input.brief;
+  if (!brief || !Array.isArray(brief.figures) || brief.figures.length === 0) {
+    return { error: 'invalid_brief', detail: 'brief.figures must be a non-empty array' };
+  }
+  const point = (brief.analytical_point ?? '').trim();
+  if (!point) return { error: 'invalid_brief', detail: 'brief.analytical_point is required' };
+
+  const wct = input.word_count_target ?? 150;
+
+  let text: string;
+  try {
+    text = (await composer({ brief, word_count_target: wct })).trim();
+  } catch (err) {
+    return { error: 'composer_failed', detail: err instanceof Error ? err.message : String(err) };
+  }
   if (!text) return { error: 'commentary_empty' };
 
   const count = text.split(/\s+/).filter(Boolean).length;
   if (count > MAX_COMMENTARY_WORDS) return { error: 'commentary_too_long', word_count: count, limit: MAX_COMMENTARY_WORDS };
 
-  const style_warnings = lintHouseStyle(text, count, input.word_count_target ?? 150);
-  return { render_id: newRenderId(), word_count: count, style_warnings };
+  const style_warnings = lintHouseStyle(text, count, wct);
+  return { render_id: newRenderId(), text, word_count: count, style_warnings };
 }
 
 function lintHouseStyle(text: string, wordCount: number, target: number): string[] {

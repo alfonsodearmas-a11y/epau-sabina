@@ -204,14 +204,45 @@ export const AGENT_TOOLS = [
   {
     name: 'render_commentary',
     description:
-      'Emit a prose commentary block in EPAU house style. Lint warnings are surfaced but do not block. ' +
-      'Word count default 150, range 80–250.',
+      'Emit a prose commentary block in EPAU house style. ' +
+      'You do NOT write the prose; you submit a structured brief and a separate composer produces the paragraph. ' +
+      'The brief is a list of figures (each with label, value, unit, period, indicator_id) and a single analytical_point sentence. ' +
+      'Use this tool for briefing-register or note-style asks. Word count default 150, range 80–250.',
     input_schema: {
       type: 'object',
-      required: ['text'],
+      required: ['brief'],
       additionalProperties: false,
       properties: {
-        text: { type: 'string' },
+        brief: {
+          type: 'object',
+          required: ['figures', 'analytical_point'],
+          additionalProperties: false,
+          properties: {
+            figures: {
+              type: 'array',
+              minItems: 1,
+              description:
+                'Every figure the paragraph should cite. Every value must come from a get_observations, ' +
+                'get_comparison_table, or compute call made earlier in this turn.',
+              items: {
+                type: 'object',
+                required: ['label', 'value', 'unit', 'period', 'indicator_id'],
+                additionalProperties: false,
+                properties: {
+                  label: { type: 'string' },
+                  value: { type: 'number' },
+                  unit: { type: 'string' },
+                  period: { type: 'string' },
+                  indicator_id: { type: 'string' },
+                },
+              },
+            },
+            analytical_point: {
+              type: 'string',
+              description: 'One sentence. What the paragraph argues. Keep it specific and single-claim.',
+            },
+          },
+        },
         pullquote: { type: 'string' },
         caveat: { type: 'string' },
         word_count_target: { type: 'integer', minimum: 80, maximum: 250 },
