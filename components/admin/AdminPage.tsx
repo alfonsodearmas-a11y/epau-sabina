@@ -37,22 +37,22 @@ export function AdminPage() {
   }, []);
 
   return (
-    <div className="px-8 pt-6 pb-16 max-w-[1400px] mx-auto">
-      <div className="flex items-end justify-between mb-5">
+    <div className="px-4 md:px-8 pt-6 pb-16 md:pb-24 max-w-[1400px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
         <div>
           <div className="text-[11.5px] uppercase tracking-[0.18em] text-text-tertiary">
             Admin · Ingestion
           </div>
-          <h1 className="font-serif text-[34px] leading-[1.1] text-text-primary mt-1">
+          <h1 className="font-serif text-[28px] md:text-[34px] leading-[1.1] text-text-primary mt-1">
             Last workbook re-ingest.
           </h1>
         </div>
-        <button className="h-9 px-4 rounded-md bg-gold-300 text-ink-950 text-[12.5px] font-semibold flex items-center gap-1.5">
+        <button className="h-11 md:h-9 px-4 rounded-md bg-gold-300 text-ink-950 text-[13px] md:text-[12.5px] font-semibold flex items-center gap-1.5 self-start">
           <RefreshIcon className="w-3.5 h-3.5" /> Re-ingest now
         </button>
       </div>
 
-      <div className="grid grid-cols-5 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         <StatCard label="Run started" value={run.timestamp} span={2} />
         <StatCard label="Sheets parsed" value={String(run.sheets_parsed)} />
         <StatCard
@@ -65,7 +65,7 @@ export function AdminPage() {
         />
       </div>
 
-      <div className="grid grid-cols-[1fr_280px] gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3">
         <div className="glass rounded-lg overflow-hidden">
           <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
             <div className="flex items-center gap-2">
@@ -88,28 +88,30 @@ export function AdminPage() {
             </button>
           </div>
           {expanded ? (
-            <div className="font-mono text-[11.5px]">
-              <div className="grid grid-cols-[100px_72px_1fr_88px] gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.1em] text-text-tertiary bg-white/[0.02] border-b border-white/5">
-                <div>Sheet</div>
-                <div>Cell</div>
-                <div>Reason</div>
-                <div>Severity</div>
-              </div>
-              {run.quarantine.map((q, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-[100px_72px_1fr_88px] gap-3 px-4 py-2 border-b border-white/4 hover:bg-white/[0.02]"
-                >
-                  <div className="text-gold-200">{q.sheet}</div>
-                  <div className="text-text-secondary num">{q.cell}</div>
-                  <div className="text-text-primary font-sans text-[12px]">
-                    {q.reason}
-                  </div>
-                  <div>
-                    <SeverityPill s={q.severity} />
-                  </div>
+            <div className="font-mono text-[11.5px] overflow-x-auto scroll-thin">
+              <div className="min-w-[560px]">
+                <div className="grid grid-cols-[100px_72px_1fr_88px] gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.1em] text-text-tertiary bg-white/[0.02] border-b border-white/5">
+                  <div>Sheet</div>
+                  <div>Cell</div>
+                  <div>Reason</div>
+                  <div>Severity</div>
                 </div>
-              ))}
+                {run.quarantine.map((q, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[100px_72px_1fr_88px] gap-3 px-4 py-2 border-b border-white/4 hover:bg-white/[0.02]"
+                  >
+                    <div className="text-gold-200">{q.sheet}</div>
+                    <div className="text-text-secondary num">{q.cell}</div>
+                    <div className="text-text-primary font-sans text-[12px]">
+                      {q.reason}
+                    </div>
+                    <div>
+                      <SeverityPill s={q.severity} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>

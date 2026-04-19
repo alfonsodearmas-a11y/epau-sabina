@@ -55,8 +55,8 @@ export function BugReportsPage() {
   }
 
   return (
-    <div className="px-8 pt-6 pb-16 max-w-[1200px] mx-auto">
-      <div className="flex items-end justify-between mb-6">
+    <div className="px-4 md:px-8 pt-6 pb-16 md:pb-24 max-w-[1200px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Bug reports</h1>
           <p className="text-[13px] text-text-tertiary mt-1">
@@ -64,12 +64,12 @@ export function BugReportsPage() {
             fix in the ingestion layer, document as intentional in the indicator caveat, or escalate.
           </p>
         </div>
-        <div className="flex gap-1 bg-white/[0.03] border border-white/10 rounded-md p-0.5">
+        <div className="flex gap-1 bg-white/[0.03] border border-white/10 rounded-md p-0.5 self-start">
           {(['open', 'resolved', 'all'] as Filter[]).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 h-7 text-[12px] rounded ${
+              className={`px-3 h-10 md:h-7 text-[13px] md:text-[12px] rounded ${
                 filter === f ? 'bg-white/10 text-text-primary' : 'text-text-tertiary hover:text-text-primary'
               }`}
             >
@@ -113,7 +113,7 @@ export function BugReportsPage() {
                 </div>
                 <button
                   onClick={() => setResolved(r.id, !r.resolved)}
-                  className={`h-8 px-3 rounded-md text-[11.5px] border ${
+                  className={`h-11 md:h-8 px-3 rounded-md text-[12.5px] md:text-[11.5px] border shrink-0 ${
                     r.resolved
                       ? 'bg-white/[0.02] border-white/10 text-text-tertiary hover:text-text-primary'
                       : 'bg-[#7FC29B]/10 border-[#7FC29B]/30 text-[#7FC29B] hover:bg-[#7FC29B]/20'
