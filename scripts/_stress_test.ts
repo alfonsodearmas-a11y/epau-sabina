@@ -101,12 +101,17 @@ async function runOne(q: Query) {
   // ordinals like "top 1%") are consistent with runtime auditing.
   const numbersInFinal = runNumericAudit(finalText, []).unground.map((u) => ({ raw: u.raw, value: u.value }));
 
-  // Named-source scan (case insensitive) over the user-visible text AND any
-  // structured tool inputs for flag_unavailable.
-  const NAMED = ['World Bank', 'IMF', 'International Monetary Fund', 'ECLAC', 'Bureau of Statistics', 'United Nations', 'UN System', 'UN,', 'IDB', 'Inter-American Development Bank', 'Bank of Guyana', 'WHO', 'UNICEF', 'UNESCO', 'OECD', 'CDB', 'Caribbean Development Bank', 'CIA', 'GECOM', 'Ministry of Health', 'Ministry of Finance'];
-  const namedInProse = NAMED.filter((n) => new RegExp(`\\b${n}\\b`, 'i').test(finalText));
+  // Named-source scan. Acronyms are case-sensitive (so the English word
+  // "who" doesn't match "WHO"). Full names are case-insensitive.
+  const ACRONYMS = ['IMF', 'ECLAC', 'UN', 'IDB', 'WHO', 'UNICEF', 'UNESCO', 'OECD', 'CDB', 'CIA', 'GECOM'];
+  const FULL_NAMES = ['World Bank', 'International Monetary Fund', 'Bureau of Statistics', 'United Nations', 'Inter-American Development Bank', 'Bank of Guyana', 'Caribbean Development Bank', 'Ministry of Health', 'Ministry of Finance', 'Guyana Tourism Authority', 'Guyana Revenue Authority'];
   const flagInputStringified = JSON.stringify(flagInputs);
-  const namedInFlagInput = NAMED.filter((n) => new RegExp(`\\b${n}\\b`, 'i').test(flagInputStringified));
+  const namesIn = (text: string) => [
+    ...ACRONYMS.filter((n) => new RegExp(`\\b${n}\\b`).test(text)),
+    ...FULL_NAMES.filter((n) => new RegExp(`\\b${n}\\b`, 'i').test(text)),
+  ];
+  const namedInProse = namesIn(finalText);
+  const namedInFlagInput = namesIn(flagInputStringified);
 
   let traces: unknown[] = [];
   if (sessionId) {
