@@ -39,7 +39,10 @@ export function runNumericAudit(text: string, allowedRawValues: number[]): Numer
 
 // --- Extraction -------------------------------------------------------------
 
-const NUM = '\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?|\\d+(?:\\.\\d+)?';
+// Match comma-grouped numbers (1,234 / 12,345.67) OR plain digit sequences
+// (309 / 3099.8), with an optional decimal tail. Alternation is ordered so
+// the comma form wins where applicable; the plain form is used otherwise.
+const NUM = '(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?';
 
 // Ordered list: first match wins at a given index.
 const PATTERNS: Array<{ kind: AuditTokenKind; re: RegExp }> = [
@@ -106,6 +109,7 @@ function overlapsClaimed(start: number, len: number, claimed: Set<number>): bool
 
 function isExcluded(kind: AuditTokenKind, value: number, raw: string, text: string, start: number): boolean {
   const isInteger = !raw.includes('.');
+  const end = start + raw.length;
 
   // Plain integer years 1900–2099 (only when the pattern is 'raw' — a
   // currency/percent figure of 2015 is still data and should be audited).
@@ -114,12 +118,17 @@ function isExcluded(kind: AuditTokenKind, value: number, raw: string, text: stri
   // Single-digit enumeration integers ("three shifts", "1.", "2.").
   if (kind === 'raw' && isInteger && Math.abs(value) < 10) return true;
 
+  // Measurement-period labels: "12-month rate", "10-year bond", "24-hour".
+  // If the integer is immediately followed by "-month" / "-year" / "-day" /
+  // "-week" / "-hour" / "-quarter", treat as a label, not a data claim.
+  if (kind === 'raw' && isInteger) {
+    const tail = text.slice(end, end + 10).toLowerCase();
+    if (/^-(month|year|day|week|hour|quarter)s?\b/.test(tail)) return true;
+  }
+
   // Inside a list marker like "**1.** Services" — preceded by "**" then the
   // raw integer. Rarely worth auditing.
   if (kind === 'raw' && isInteger && /^\*+$/.test(text.slice(Math.max(0, start - 2), start))) return true;
-
-  // Decade ranges like "2014–2019" — the start index year hits the 1900–2099
-  // exclusion, the end index also. covered above.
 
   return false;
 }

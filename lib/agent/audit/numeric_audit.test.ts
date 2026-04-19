@@ -99,6 +99,21 @@ describe('runNumericAudit', () => {
     expect(r.unground.some((u) => Math.abs(u.value - 13) < 0.01)).toBe(true);
   });
 
+  it('extracts "US$3099.8 million" as 3099.8, not "US$309"', () => {
+    const allowed = collectAllowedValues([
+      { tool: 'get_observations', output: { series: [{ observations: [{ value: 3099.8 }] }] } },
+    ]);
+    const r = runNumericAudit('US$3099.8 million', allowed);
+    expect(r.pass).toBe(true);
+    expect(r.grounded[0]!.value).toBeCloseTo(3099.8 * 1e6, 0);
+  });
+
+  it('excludes compound period labels like "12-month" and "10-year"', () => {
+    const allowed = collectAllowedValues([{ tool: 'get_observations', output: { series: [{ observations: [{ value: 1.977 }] }] } }]);
+    const r = runNumericAudit('The 12-month inflation rate in 2023 was 1.98 percent.', allowed);
+    expect(r.pass).toBe(true);
+  });
+
   it('walks nested structures including compute batched results', () => {
     const allowed = collectAllowedValues([
       { tool: 'compute', output: { operation: 'share', results: [
