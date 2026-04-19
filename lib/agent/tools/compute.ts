@@ -31,16 +31,32 @@ export type ComputeResult =
     >;
 
 export function compute(input: ComputeInput): ComputeResult {
-  switch (input.operation) {
-    case 'yoy_growth': return yoyGrowth(input.series);
-    case 'cagr': return cagr(input.series, input.start, input.end);
-    case 'indexed': return indexed(input.series, input.base_period);
-    case 'correlation': return correlation(input.a, input.b);
-    case 'ratio': return paired('ratio', input.numerator, input.denominator);
-    case 'share': return paired('share', input.part, input.total);
-    case 'difference': return paired('difference', input.a, input.b);
+  const norm = normalizeInput(input);
+  switch (norm.operation) {
+    case 'yoy_growth': return yoyGrowth(norm.series);
+    case 'cagr': return cagr(norm.series, norm.start, norm.end);
+    case 'indexed': return indexed(norm.series, norm.base_period);
+    case 'correlation': return correlation(norm.a, norm.b);
+    case 'ratio': return paired('ratio', norm.numerator, norm.denominator);
+    case 'share': return paired('share', norm.part, norm.total);
+    case 'difference': return paired('difference', norm.a, norm.b);
     default: return { error: 'unknown_operation' } as ComputeResult;
   }
+}
+
+// Claude occasionally serialises the varying-side argument as a JSON string
+// (e.g. `"part": "[{...}]"`) rather than the array the schema asks for.
+// Accept that shape so a single Claude-side slip doesn't burn the tool budget.
+function normalizeInput(input: ComputeInput): ComputeInput {
+  const coerce = (v: unknown): unknown => {
+    if (typeof v !== 'string') return v;
+    try { return JSON.parse(v); } catch { return v; }
+  };
+  const clone = { ...input } as Record<string, unknown>;
+  for (const k of ['a', 'numerator', 'part'] as const) {
+    if (k in clone) clone[k] = coerce(clone[k]);
+  }
+  return clone as ComputeInput;
 }
 
 function yoyGrowth(series: Point[]): ComputeResult {
