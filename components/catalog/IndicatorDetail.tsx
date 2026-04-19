@@ -59,7 +59,7 @@ export function IndicatorDetail({ indicator, onClose }: IndicatorDetailProps) {
     <div className="fixed inset-0 z-40" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
       <div
-        className="absolute top-0 right-0 bottom-0 w-[520px] slide-in"
+        className="absolute top-0 right-0 bottom-0 w-full md:w-[520px] slide-in safe-top safe-bottom"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-full glass-strong border-l border-white/10 flex flex-col">

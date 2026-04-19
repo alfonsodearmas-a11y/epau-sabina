@@ -44,6 +44,7 @@ export function CatalogPage() {
   const [selected, setSelected] = useState<Indicator | null>(null);
   const [indicators, setIndicators] = useState<Indicator[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,18 +68,20 @@ export function CatalogPage() {
     return true;
   });
 
+  const activeFilterCount = cats.size + freqs.size + sources.size + (caveatOnly ? 1 : 0);
+
   return (
-    <div className="px-8 pt-6 pb-16 max-w-[1500px] mx-auto">
-      <div className="flex items-end justify-between mb-5">
+    <div className="px-4 md:px-8 pt-6 pb-16 md:pb-24 max-w-[1500px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2 mb-5">
         <div>
           <div className="text-[11.5px] uppercase tracking-[0.18em] text-text-tertiary">
             Indicator Catalog
           </div>
-          <h1 className="font-serif text-[34px] leading-[1.1] text-text-primary mt-1">
+          <h1 className="font-serif text-[28px] md:text-[34px] leading-[1.1] text-text-primary mt-1">
             Every series the workbook has ingested.
           </h1>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-text-tertiary pt-2 num">
+        <div className="flex items-center gap-3 text-[11px] text-text-tertiary num">
           <span>
             Showing <span className="text-text-primary">{filtered.length}</span>{' '}
             of <span className="text-text-primary">{indicators.length}</span>
@@ -87,20 +90,50 @@ export function CatalogPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[240px_1fr] gap-4">
-        <FilterSidebar
-          categoryList={CATEGORY_LIST}
-          frequencyList={FREQUENCY_LIST}
-          sourceList={sourceList}
-          cats={cats}
-          freqs={freqs}
-          sources={sources}
-          caveatOnly={caveatOnly}
-          onToggleCategory={(v) => setCats((s) => toggle(s, v))}
-          onToggleFrequency={(v) => setFreqs((s) => toggle(s, v))}
-          onToggleSource={(v) => setSources((s) => toggle(s, v))}
-          onToggleCaveatOnly={() => setCaveatOnly((x) => !x)}
-        />
+      <div className="lg:hidden mb-2">
+        <button
+          onClick={() => setFilterOpen((v) => !v)}
+          aria-expanded={filterOpen}
+          className="w-full h-11 px-4 rounded-md bg-white/[0.03] border border-white/10 text-text-secondary flex items-center justify-between text-[13.5px]"
+        >
+          <span>Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</span>
+          <span className={`text-text-tertiary transition-transform ${filterOpen ? 'rotate-180' : ''}`}>▾</span>
+        </button>
+        {filterOpen ? (
+          <div className="mt-2">
+            <FilterSidebar
+              categoryList={CATEGORY_LIST}
+              frequencyList={FREQUENCY_LIST}
+              sourceList={sourceList}
+              cats={cats}
+              freqs={freqs}
+              sources={sources}
+              caveatOnly={caveatOnly}
+              onToggleCategory={(v) => setCats((s) => toggle(s, v))}
+              onToggleFrequency={(v) => setFreqs((s) => toggle(s, v))}
+              onToggleSource={(v) => setSources((s) => toggle(s, v))}
+              onToggleCaveatOnly={() => setCaveatOnly((x) => !x)}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
+        <div className="hidden lg:block">
+          <FilterSidebar
+            categoryList={CATEGORY_LIST}
+            frequencyList={FREQUENCY_LIST}
+            sourceList={sourceList}
+            cats={cats}
+            freqs={freqs}
+            sources={sources}
+            caveatOnly={caveatOnly}
+            onToggleCategory={(v) => setCats((s) => toggle(s, v))}
+            onToggleFrequency={(v) => setFreqs((s) => toggle(s, v))}
+            onToggleSource={(v) => setSources((s) => toggle(s, v))}
+            onToggleCaveatOnly={() => setCaveatOnly((x) => !x)}
+          />
+        </div>
 
         <IndicatorTable
           indicators={filtered}

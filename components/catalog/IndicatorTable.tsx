@@ -33,54 +33,82 @@ export function IndicatorTable({
         <KeyCap>/</KeyCap>
       </div>
       <div className="bg-white/[0.01] border border-white/6 border-t-0 rounded-b-lg overflow-hidden">
-        {/* header */}
-        <div className="grid grid-cols-[1fr_110px_110px_120px_170px_28px] gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-text-tertiary bg-white/[0.02]">
-          <div>Indicator</div>
-          <div>Category</div>
-          <div>Frequency</div>
-          <div>Latest</div>
-          <div>Source</div>
-          <div />
+        {/* Mobile: card-style rows, no horizontal scroll, touch-friendly.
+            Desktop (md+): original dense 6-column grid with horizontal scroll
+            if it ever exceeds the container. */}
+        <div className="hidden md:block">
+          <div className="overflow-x-auto scroll-thin">
+            <div className="min-w-[720px]">
+              <div className="grid grid-cols-[1fr_110px_110px_120px_170px_28px] gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.12em] text-text-tertiary bg-white/[0.02]">
+                <div>Indicator</div>
+                <div>Category</div>
+                <div>Frequency</div>
+                <div>Latest</div>
+                <div>Source</div>
+                <div />
+              </div>
+              <div className="max-h-[640px] overflow-y-auto scroll-thin">
+                {indicators.map((ind) => {
+                  const sourcePrefix = ind.source.split(',')[0] ?? ind.source;
+                  return (
+                    <button
+                      key={ind.id}
+                      onClick={() => onSelect(ind)}
+                      className="w-full grid grid-cols-[1fr_110px_110px_120px_170px_28px] gap-3 px-4 py-2 border-t border-white/5 hover:bg-white/[0.025] transition-colors text-left items-center"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {ind.caveat ? (
+                          <WarnIcon className="w-3.5 h-3.5 text-[#E0A050] shrink-0" />
+                        ) : (
+                          <span className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        <span className="text-[12.5px] text-text-primary truncate">{ind.name}</span>
+                      </div>
+                      <div><CategoryPill category={ind.category} /></div>
+                      <div><FreqPill frequency={ind.frequency} /></div>
+                      <div className="text-[11.5px] num text-text-secondary">{ind.latest}</div>
+                      <div className="text-[11px] text-text-tertiary truncate">{sourcePrefix}</div>
+                      <ChevIcon className="w-4 h-4 text-text-quat -rotate-90" />
+                    </button>
+                  );
+                })}
+                {indicators.length === 0 ? (
+                  <div className="px-4 py-6 text-[12px] text-text-tertiary">No indicators match those filters.</div>
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="max-h-[640px] overflow-y-auto scroll-thin">
+
+        <div className="md:hidden max-h-[70vh] overflow-y-auto scroll-thin">
           {indicators.map((ind) => {
             const sourcePrefix = ind.source.split(',')[0] ?? ind.source;
             return (
               <button
                 key={ind.id}
                 onClick={() => onSelect(ind)}
-                className="w-full grid grid-cols-[1fr_110px_110px_120px_170px_28px] gap-3 px-4 py-2 border-t border-white/5 hover:bg-white/[0.025] transition-colors text-left items-center"
+                className="w-full border-t border-white/5 first:border-t-0 px-4 py-3 flex items-start gap-3 text-left hover:bg-white/[0.025] transition-colors"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  {ind.caveat ? (
-                    <WarnIcon className="w-3.5 h-3.5 text-[#E0A050] shrink-0" />
-                  ) : (
-                    <span className="w-3.5 h-3.5 shrink-0" />
-                  )}
-                  <span className="text-[12.5px] text-text-primary truncate">
-                    {ind.name}
-                  </span>
+                {ind.caveat ? (
+                  <WarnIcon className="w-4 h-4 text-[#E0A050] shrink-0 mt-0.5" />
+                ) : (
+                  <span className="w-4 h-4 shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] text-text-primary leading-snug">{ind.name}</div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <CategoryPill category={ind.category} />
+                    <FreqPill frequency={ind.frequency} />
+                    <span className="text-[11px] num text-text-tertiary">{ind.latest}</span>
+                  </div>
+                  <div className="text-[11px] text-text-tertiary mt-1 truncate">{sourcePrefix}</div>
                 </div>
-                <div>
-                  <CategoryPill category={ind.category} />
-                </div>
-                <div>
-                  <FreqPill frequency={ind.frequency} />
-                </div>
-                <div className="text-[11.5px] num text-text-secondary">
-                  {ind.latest}
-                </div>
-                <div className="text-[11px] text-text-tertiary truncate">
-                  {sourcePrefix}
-                </div>
-                <ChevIcon className="w-4 h-4 text-text-quat -rotate-90" />
+                <ChevIcon className="w-4 h-4 text-text-quat -rotate-90 mt-1 shrink-0" />
               </button>
             );
           })}
           {indicators.length === 0 ? (
-            <div className="px-4 py-6 text-[12px] text-text-tertiary">
-              No indicators match those filters.
-            </div>
+            <div className="px-4 py-6 text-[12px] text-text-tertiary">No indicators match those filters.</div>
           ) : null}
         </div>
       </div>
