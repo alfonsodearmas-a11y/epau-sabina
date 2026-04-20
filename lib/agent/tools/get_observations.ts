@@ -1,4 +1,4 @@
-import type { Frequency, IndicatorCategory, Point, Scenario, ToolError } from '../types';
+import type { Frequency, IndicatorCategory, Scenario, ToolError } from '../types';
 
 export type IndicatorMeta = {
   id: string;

@@ -77,7 +77,7 @@ export async function POST(req: Request) {
 
       recorder.user({ text: message, surface_context: body.surface_context ?? null }, surface);
 
-      const history = await loadHistory(session.id);
+      const history = await loadHistory();
       const messages: Anthropic.Messages.MessageParam[] = [
         ...history,
         { role: 'user', content: message },
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
 
 // History disabled in v1 — prior-turn text was bleeding into grounding-rule
 // enforcement. See docs/agent_design.md §4 data grounding rule.
-async function loadHistory(_sessionId: string): Promise<Anthropic.Messages.MessageParam[]> {
+async function loadHistory(): Promise<Anthropic.Messages.MessageParam[]> {
   return [];
 }
 

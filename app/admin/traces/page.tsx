@@ -62,11 +62,6 @@ export default async function TracesRoute({ searchParams }: { searchParams: Prom
     where: { sessionId: { in: sessionIds }, role: 'tool_call' },
     _count: { _all: true },
   }) : [];
-  const failureRows = sessionIds.length ? await prisma.agentTrace.groupBy({
-    by: ['sessionId'],
-    where: { sessionId: { in: sessionIds }, role: 'system_event', errorCode: 'numeric_audit_failed_retry' },
-    _count: { _all: true },
-  }) : [];
   const anyFailureRows = sessionIds.length ? await prisma.agentTrace.findMany({
     where: { sessionId: { in: sessionIds }, role: 'system_event' },
     select: { sessionId: true, content: true },
